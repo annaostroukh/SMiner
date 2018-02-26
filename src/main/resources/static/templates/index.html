@@ -1,0 +1,113 @@
+<!doctype html>
+<html>
+<head>
+    <title>SemanticsMiner</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="/css/loading-bar.css" type="text/css" media="all" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="/css/leaflet.css">
+    <link rel="stylesheet" href="/css/sminer.css"/>
+</head>
+<body ng-app="sminer">
+<header>
+    <!-- Fixed navbar -->
+    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+        <a class="navbar-brand" href="#">SemanticsMiner</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="#">Map <span class="sr-only">(current)</span></a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Reachability plot</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</header>
+<!-- Begin page content -->
+<main role="main" class="container">
+    <div class="container" ng-controller="sminerController">
+        <div class="button-contols upload-section">
+            <!-- Upload data set section -->
+            <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                    <button ng-click="uploadFile()" class="btn btn-outline-secondary" type="button">Upload</button>
+                </div>
+                <div class="custom-file">
+                    <input type="file" file-model="uploadedFile" class="custom-file-input" id="inputGroupFile01">
+                    <label ng-if="!uploadedFile" class="custom-file-label" for="inputGroupFile01">Choose MOD data set</label>
+                    <label ng-if="uploadedFile" class="custom-file-label" for="inputGroupFile01">
+                        {{uploadedFile.name + " (" + getMbSize(uploadedFile.size) + " Mb)"}}
+                    </label>
+                </div>
+            </div>
+            <!-- Progress bar -->
+            <div id="loading-bar-container"></div>
+            <!-- File info section -->
+            <div class="file-info" ng-if="fileLoaded">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>File name</th>
+                        <th>File size</th>
+                        <th>Entries</th>
+                        <th>Valid trajectories</th>
+                        <th>Elapsed time</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr scope="row">
+                        <td>{{uploadedFile.name}}</td>
+                        <td>{{getMbSize(uploadedFile.size) + " Mb"}}</td>
+                        <td>{{fileStats.totalAmountOfTrajectories}}</td>
+                        <td>{{fileStats.validTrajectories}}</td>
+                        <td>{{fileStats.elapsedTime + "s"}}</td>
+                        <td>Success</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Data set actions buttons -->
+            <div class = "analysis-actions">
+                <button type="button" class="btn btn-primary" ng-disabled="!fileLoaded">Run data set analysis</button>
+                <button type="button" class="btn btn-secondary" ng-disabled="!dataSetAnalysisDone">Discover semantic locations</button>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <leaflet width="100%" height="500px"></leaflet>
+    </div>
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <span class="text-muted">Place sticky footer content here.</span>
+    </div>
+</footer>
+
+<script src="/js/libs/angular.min.js"></script>
+<script src="/js/libs/angular-route.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+<!--<script src="/js/libs/ui-botstrap-tpls-2.5.0.min.js"></script>-->
+<!-- Leaflet js map viewer -->
+<script src="/js/libs/leaflet.js"></script>
+<script src="/js/libs/angular-simple-logger.js"></script>
+<script src="/js/libs/ui-leaflet.min.js"></script>
+<script src="/js/libs/loading-bar.js"></script>
+
+<script src="/js/app.js"></script>
+<script src="/js/sminerController.js"></script>
+<script src="/js/sminerService.js"></script>
+
+</body>
+</html>
