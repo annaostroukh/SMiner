@@ -19,12 +19,15 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarCollapse">
-            <ul class="navbar-nav mr-auto">
+            <ul id="myTab" class="navbar-nav nav mr-auto" role="tablist">
                 <li class="nav-item active">
-                    <a class="nav-link" href="#">Map <span class="sr-only">(current)</span></a>
+                    <a class="nav-link" id="stops-tab" data-toggle="tab" href="#stops" role="tab" aria-controls="stops" aria-selected="true">Extract stops <span class="sr-only">(current)</span></a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Reachability plot</a>
+                    <a class="nav-link" id="optics-tab" data-toggle="tab" href="#optics" role="tab" aria-controls="optics" aria-selected="false">OPTICS Reachability plot</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="locations-tab" data-toggle="tab" href="#locations" role="tab" ria-controls="locations" aria-selected="false">Extract semantic locations</a>
                 </li>
             </ul>
         </div>
@@ -32,58 +35,106 @@
 </header>
 <!-- Begin page content -->
 <main role="main" class="container">
-    <div class="container" ng-controller="sminerController">
-        <div class="button-contols upload-section">
-            <!-- Upload data set section -->
-            <div class="input-group mb-3">
-                <div class="input-group-prepend">
-                    <button ng-click="uploadFile()" class="btn btn-outline-secondary" type="button">Upload</button>
+    <div ng-controller="sminerController">
+        <div id="myTabContent" class="tab-content">
+        <div id="stops" class="tab-pane fade show active tab-margin" role="tabpanel" aria-labelledby="stops-tab">
+            <div class="button-contols upload-section">
+                <!-- Upload data set section -->
+                <div class="input-group mb-3 row justify-content-md-center">
+                    <div class="input-group-prepend">
+                        <button ng-click="uploadFile()" class="btn btn-outline-secondary" type="button">Upload</button>
+                    </div>
+                    <div class="custom-file">
+                        <input type="file" file-model="uploadedFile" class="custom-file-input" id="inputGroupFile01">
+                        <label ng-if="!uploadedFile" class="custom-file-label" for="inputGroupFile01">Choose MOD data set</label>
+                        <label ng-if="uploadedFile" class="custom-file-label" for="inputGroupFile01">
+                            {{uploadedFile.name + " (" + getMbSize(uploadedFile.size) + " Mb)"}}
+                        </label>
+                    </div>
                 </div>
-                <div class="custom-file">
-                    <input type="file" file-model="uploadedFile" class="custom-file-input" id="inputGroupFile01">
-                    <label ng-if="!uploadedFile" class="custom-file-label" for="inputGroupFile01">Choose MOD data set</label>
-                    <label ng-if="uploadedFile" class="custom-file-label" for="inputGroupFile01">
-                        {{uploadedFile.name + " (" + getMbSize(uploadedFile.size) + " Mb)"}}
-                    </label>
+                <!-- Progress bar -->
+                <div ng-if="uploadingInProgress" id="loading-bar-container"></div>
+                <!-- File info section -->
+                <div class="file-info row justify-content-md-center" ng-if="fileLoaded">
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th>File name</th>
+                            <th>File size</th>
+                            <th>Entries</th>
+                            <th>Valid records</th>
+                            <th>Elapsed time</th>
+                            <th>Status</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr scope="row">
+                            <td>{{uploadedFile.name}}</td>
+                            <td>{{getMbSize(uploadedFile.size) + " Mb"}}</td>
+                            <td>{{fileStats.totalAmountOfRecords}}</td>
+                            <td>{{fileStats.validRecords}}</td>
+                            <td>{{fileStats.elapsedTime + "s"}}</td>
+                            <td>Success</td>
+                        </tr>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-            <!-- Progress bar -->
-            <div id="loading-bar-container"></div>
-            <!-- File info section -->
-            <div class="file-info" ng-if="fileLoaded">
-                <table class="table">
-                    <thead>
-                    <tr>
-                        <th>File name</th>
-                        <th>File size</th>
-                        <th>Entries</th>
-                        <th>Valid trajectories</th>
-                        <th>Elapsed time</th>
-                        <th>Status</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr scope="row">
-                        <td>{{uploadedFile.name}}</td>
-                        <td>{{getMbSize(uploadedFile.size) + " Mb"}}</td>
-                        <td>{{fileStats.totalAmountOfTrajectories}}</td>
-                        <td>{{fileStats.validTrajectories}}</td>
-                        <td>{{fileStats.elapsedTime + "s"}}</td>
-                        <td>Success</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
 
-            <!-- Data set actions buttons -->
-            <div class = "analysis-actions">
-                <button type="button" class="btn btn-primary" ng-disabled="!fileLoaded">Run data set analysis</button>
-                <button type="button" class="btn btn-secondary" ng-disabled="!dataSetAnalysisDone">Discover semantic locations</button>
+                <!-- Data set actions buttons -->
+                <div class = "analysis-actions">
+                    <div ng-show="fileLoaded">
+                        <div  class="row">
+                            <b>Set required stop duration in minutes</b>
+                        </div>
+                        <div class="extract-stops row justify-content-md-center">
+                            <input type="text" placeholder="Minimum duration" ng-model="minStopDuration" class="stop-duration form-control col" id="minStopDuration">
+                            <input type="text" placeholder="Maximum duration" ng-model="maxStopDuration" class="stop-duration form-control col" id="maxStopDuration">
+                            <button type="button" class="btn btn-primary col-12 col-md-auto" ng-click=extractStops() ng-disabled="!minStopDuration">Extract stops</button>
+                        </div>
+                        <div class="row">
+                            <div ng-if="stopsExtracted" class="alert alert-success container-wide" role="alert">
+                                <span><p>{{stopsAmount}}</p><a href="#optics" class="alert-link">Go to reachability plot</a></span>
+                            </div>
+                        </div>
+                    </div>
+                    <!--<button type="button" class="btn btn-secondary" ng-disabled="!dataSetAnalysisDone">Discover semantic locations</button>-->
+                </div>
             </div>
         </div>
 
+        <div id="optics" class="tab-pane fade tab-margin" role="tabpanel" aria-labelledby="optics-tab">
+            <!-- Reachability plot graph -->
+            <div ng-show="stopsExtracted">
+                <div class="row">
+                    <h3 class="header-margin">OPTICS reachability plot settings</h3>
+                </div>
+                <div class="row">
+                    <h5 class="analysis-actions">Temporal plot</h5>
+                </div>
+                <div class="extract-stops row justify-content-md-center">
+                    <input type="text" placeholder="Epsilon (maximum stop duration)" ng-model="epsilon" class="stop-duration form-control col" id="epsilon">
+                    <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPts" class="stop-duration form-control col" id="minPts">
+                    <button type="button" class="btn btn-primary" ng-click="getReachabilityPlot()" ng-disabled="!stopsExtracted">Get Reachability plot</button>
+                </div>
+                <div class="row">
+                    <h5 class="analysis-actions">Spatial plot</h5>
+                </div>
+                <div class="extract-stops row justify-content-md-center">
+                    <input type="text" placeholder="Epsilon (maximum radius)" ng-model="epsilonSpatial" class="stop-duration form-control col" id="epsilonSpatial">
+                    <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPtsSpatial" class="stop-duration form-control col" id="minPtsSpatial">
+                    <button type="button" class="btn btn-primary" ng-click="getReachabilityPlot()" ng-disabled="!stopsExtracted">Get Reachability plot</button>
+                </div>
+            </div>
+            <div zingchart id="myChart" zc-json="myJson" zc-width="100%" zc-height="568px"></div>
+        </div>
+        <div id="locations" class="tab-pane fade tab-margin" role="tabpanel" aria-labelledby="locations-tab">
+
+        </div>
+    </div> <!-- Tab content -->
+
+
         <!-- Map -->
-        <leaflet width="100%" height="500px"></leaflet>
+        <!--<leaflet width="100%" height="500px"></leaflet>-->
     </div>
 </main>
 
@@ -98,12 +149,15 @@
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-<!--<script src="/js/libs/ui-botstrap-tpls-2.5.0.min.js"></script>-->
+<script src="/js/libs/tab.js"></script>
+<script src="/js/libs/alert.js"></script>
 <!-- Leaflet js map viewer -->
 <script src="/js/libs/leaflet.js"></script>
 <script src="/js/libs/angular-simple-logger.js"></script>
 <script src="/js/libs/ui-leaflet.min.js"></script>
 <script src="/js/libs/loading-bar.js"></script>
+<script src="/js/libs/zingchart.min.js"></script>
+<script src="/js/libs/zingchart-angularjs.js"></script>
 
 <script src="/js/app.js"></script>
 <script src="/js/sminerController.js"></script>

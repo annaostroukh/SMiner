@@ -1,25 +1,25 @@
 package com.sminer.model;
 
 public class FileStats {
-    private long totalAmountOfTrajectories;
-    private long validTrajectories;
+    private long totalAmountOfRecords;
+    private long validRecords;
     private double elapsedTime;
 
-    public long getTotalAmountOfTrajectories() {
-        return totalAmountOfTrajectories;
+    public long getTotalAmountOfRecords() {
+        return totalAmountOfRecords;
     }
 
-    public FileStats setTotalAmountOfTrajectories(long totalAmountOfTrajectories) {
-        this.totalAmountOfTrajectories = totalAmountOfTrajectories;
+    public FileStats setTotalAmountOfRecords(long totalAmountOfRecords) {
+        this.totalAmountOfRecords = totalAmountOfRecords;
         return this;
     }
 
-    public long getValidTrajectories() {
-        return validTrajectories;
+    public long getValidRecords() {
+        return validRecords;
     }
 
-    public FileStats setValidTrajectories(long validTrajectories) {
-        this.validTrajectories = validTrajectories;
+    public FileStats setValidRecords(long validRecords) {
+        this.validRecords = validRecords;
         return this;
     }
 

@@ -1,24 +1,19 @@
 package com.sminer.service;
 
-import com.sminer.model.FileStats;
-import com.sminer.model.Trajectory;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.LineIterator;
+import com.sminer.model.Record;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 public class DocumentServiceImpl implements IDocumentService{
@@ -34,27 +29,23 @@ public class DocumentServiceImpl implements IDocumentService{
     }
 
     @Override
-    public List<Trajectory> parseCsvFileToTrajectories(File file) {
-        List<Trajectory> trajectories = new ArrayList<>();
+    public List<Record> parseCsvFileToRecords(File file) {
+        List<Record> records = new ArrayList<>();
         try {
-            trajectories = Files.lines(file.toPath(), StandardCharsets.UTF_8).skip(1)
+            records = Files.lines(file.toPath(), StandardCharsets.UTF_8).skip(1)
                     .map(s -> {
                         String[] parsedLine = s.split(",");
-                        return isValidTrajectory(new Trajectory(Integer.parseInt(parsedLine[0]),
-                                isPresent(parsedLine[1]) ? Integer.parseInt(parsedLine[1]) : 0,
+                        return isValidRecord(new Record(Integer.parseInt(parsedLine[0]),
                                 parseTimestamp(parsedLine[2]),
-                                parseTimestamp(parsedLine[3]),
                                 isPresent(parsedLine[4]) ? Double.parseDouble(parsedLine[4]) : 0,
-                                isPresent(parsedLine[5]) ? Double.parseDouble(parsedLine[5]) : 0,
-                                isPresent(parsedLine[6]) ? Double.parseDouble(parsedLine[6]) : 0,
-                                isPresent(parsedLine[7]) ? Double.parseDouble(parsedLine[7]) : 0));
+                                isPresent(parsedLine[5]) ? Double.parseDouble(parsedLine[5]) : 0));
                     })
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return trajectories;
+        return records;
     }
 
     @Override
@@ -66,18 +57,17 @@ public class DocumentServiceImpl implements IDocumentService{
         }
     }
 
-    private Trajectory isValidTrajectory(Trajectory t) {
-        if (t.getModId() != 0 && t.getTripId() != 0
-                && t.getStartTime() != null && t.getEndTime() != null
-                && t.getxStart() != 0 && t.getxEnd() != 0
-                && t.getyStart() != 0 && t.getyEnd() != 0) {
+    private Record isValidRecord(Record t) {
+        if (t.getModId() != 0 && t.getTimestamp() != null
+                && t.getLongitude() != 0 && t.getLattitude() != 0) {
             return t;
         }
         return null;
     }
 
     private Timestamp parseTimestamp(String timestamp) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        // Time pattern cares about hours and minutes
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm");
         Date parsedDate;
         try {
             parsedDate = dateFormat.parse(timestamp);

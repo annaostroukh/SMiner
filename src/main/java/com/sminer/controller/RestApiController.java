@@ -1,7 +1,8 @@
 package com.sminer.controller;
 
 import com.sminer.model.FileStats;
-import com.sminer.model.Trajectory;
+import com.sminer.model.Record;
+import com.sminer.service.DataAnalysisServiceImpl;
 import com.sminer.service.DocumentServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,8 +15,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.stream.Collectors.groupingBy;
 
 
 @RestController
@@ -25,28 +31,56 @@ public class RestApiController {
     @Autowired
     DocumentServiceImpl documentService;
 
+    @Autowired
+    DataAnalysisServiceImpl dataAnalysisService;
+
+    List<Record> records;
+    List<Record> recordsByStopThreshold;
+
     @RequestMapping(value = "/modFileUpload", method = RequestMethod.POST)
-    public ResponseEntity uploadModData(
+    public ResponseEntity<FileStats> uploadModData(
             @RequestParam("file")MultipartFile file) throws IOException {
         try {
             File uploadedFile = documentService.save(file);
-            long totalAmountOfRows = documentService.countLinesInDocument(uploadedFile);
+            long totalAmountOfRecords = documentService.countLinesInDocument(uploadedFile);
             long startTime = System.nanoTime();
-            List<Trajectory> trajectories = documentService.parseCsvFileToTrajectories(uploadedFile);
+            records = documentService.parseCsvFileToRecords(uploadedFile);
             long endTime = System.nanoTime();
             long elapsedTimeInMillis = TimeUnit.MILLISECONDS.convert((endTime - startTime), TimeUnit.NANOSECONDS);
-            long validAmountOfRows = trajectories.stream().count();
+            long validAmountOfRecords = records.stream().count();
             return buildOkResponse(new FileStats()
-                    .setTotalAmountOfTrajectories(totalAmountOfRows)
-                    .setValidTrajectories(validAmountOfRows)
+                    .setTotalAmountOfRecords(totalAmountOfRecords)
+                    .setValidRecords(validAmountOfRecords)
             .setElapsedTime((double)elapsedTimeInMillis / 1000));
         } catch (Exception e) {
-            return buildFailedResponse("Fail to upload " + file.getOriginalFilename());
+            return buildFailedResponse("Failed to upload " + file.getOriginalFilename());
         }
     }
 
-    private ResponseEntity buildOkResponse(Object response) {
-        return ResponseEntity.status(HttpStatus.OK).body(response);
+    @RequestMapping(value = "/extractstops", method = RequestMethod.GET)
+    public ResponseEntity extractStopsByThreshold(
+            @RequestParam("minStopDuration") int minStopDuration,
+            @RequestParam(value = "maxStopDuration", required = false, defaultValue = "0") int maxStopDuration) {
+        recordsByStopThreshold = dataAnalysisService.extractStopsFromRecordsByTreshold(records, minStopDuration, maxStopDuration);
+        int trajectories = recordsByStopThreshold.stream().collect(groupingBy(Record::getModId)).keySet().size();
+        String response = "Found " + recordsByStopThreshold.size() + " stops in " + trajectories + " trajectories";
+        return buildOkResponse(Collections.singletonMap("value", response));
+    }
+
+    @RequestMapping(value = "/reachabilityPlot", method = RequestMethod.GET)
+    public ResponseEntity getPlotByTemporalDimension(
+            @RequestParam("epsilon") int epsilon,
+            @RequestParam("minPts") int minPts) {
+        //List<Map> plotData = new ArrayList<>();
+        //Map<Integer, Double> spatialPlot = dataAnalysisService.getPlotBySpatialDim(recordsByStopThreshold);
+        Map<Integer, Integer> temporalPlot = dataAnalysisService.getPlotByTemporalDim(recordsByStopThreshold, epsilon, minPts);
+        //plotData.add(spatialPlot);
+        //plotData.add(temporalPlot);
+        return buildOkResponse(Collections.singletonMap("data", temporalPlot));
+    }
+
+    private <T> ResponseEntity<T> buildOkResponse(final T response) {
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     private ResponseEntity buildOkResponse() {

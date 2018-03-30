@@ -52,3 +52,23 @@ code {
 .analysis-actions {
     margin-bottom: 10px;
 }
+
+.stop-duration {
+    margin-right: 10px;
+}
+
+.extract-stops {
+    margin-bottom: 15px;
+}
+
+.container-wide {
+    width: 100%;
+}
+
+.tab-margin {
+    margin-top: 50px;
+}
+
+.header-margin {
+    margin-bottom: 30px;
+}

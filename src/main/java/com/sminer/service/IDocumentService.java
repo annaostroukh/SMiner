@@ -1,6 +1,6 @@
 package com.sminer.service;
 
-import com.sminer.model.Trajectory;
+import com.sminer.model.Record;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -10,7 +10,7 @@ import java.util.List;
 public interface IDocumentService {
     File save(MultipartFile file) throws IOException;
 
-    List<Trajectory> parseCsvFileToTrajectories(File file);
+    List<Record> parseCsvFileToRecords(File file);
 
     long countLinesInDocument(File file);
 }
