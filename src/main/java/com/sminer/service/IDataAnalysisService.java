@@ -1,6 +1,8 @@
 package com.sminer.service;
 
+import com.sminer.model.ModCluster;
 import com.sminer.model.Record;
+import com.sminer.model.SpatialTemporalDim;
 
 import java.util.List;
 import java.util.Map;
@@ -18,5 +20,9 @@ public interface IDataAnalysisService {
 
     Map<Integer, Integer> getPlotByTemporalDim(final List<Record> records, final Integer epsilon, final int minPts);
 
-    Map<Integer, Double> getPlotBySpatialDim(final List<Record> records);
+    Map<Integer, Double> getPlotBySpatialDim(final List<Record> records, final Double epsilon, final int minPts);
+
+    Map<Integer, SpatialTemporalDim> getPlotBySpatialTemporalDim(final List<Record> records, final Integer epsilonTemporal, final Double epsilonSpatial, final int minPts);
+
+    Map<Integer, ModCluster> getModClusters(final List<Record> records, final Integer epsilonTemporal, final Double epsilonSpatial, final int minPts);
 }

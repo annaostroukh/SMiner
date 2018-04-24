@@ -1,7 +1,6 @@
 package com.sminer.controller;
 
-import com.sminer.model.FileStats;
-import com.sminer.model.Record;
+import com.sminer.model.*;
 import com.sminer.service.DataAnalysisServiceImpl;
 import com.sminer.service.DocumentServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,22 +28,29 @@ import static java.util.stream.Collectors.groupingBy;
 public class RestApiController {
 
     @Autowired
-    DocumentServiceImpl documentService;
+    private DocumentServiceImpl documentService;
 
     @Autowired
-    DataAnalysisServiceImpl dataAnalysisService;
+    private DataAnalysisServiceImpl dataAnalysisService;
 
-    List<Record> records;
-    List<Record> recordsByStopThreshold;
+    private List<Integer> datasetConfiguration;
+    private List<Record> records;
+    private List<Record> recordsByStopThreshold;
+
+    @RequestMapping(value = "/datasetConfiguration", method = RequestMethod.POST)
+    public ResponseEntity datasetConfiguration(@RequestParam("configuration") List<Integer> configuration) {
+        datasetConfiguration = configuration;
+       return buildOkResponse(Collections.singletonMap("value", "Configuration saved!"));
+    }
 
     @RequestMapping(value = "/modFileUpload", method = RequestMethod.POST)
     public ResponseEntity<FileStats> uploadModData(
-            @RequestParam("file")MultipartFile file) throws IOException {
+            @RequestParam("file") MultipartFile file) {
         try {
             File uploadedFile = documentService.save(file);
             long totalAmountOfRecords = documentService.countLinesInDocument(uploadedFile);
             long startTime = System.nanoTime();
-            records = documentService.parseCsvFileToRecords(uploadedFile);
+            records = documentService.parseCsvFileToRecords(uploadedFile, datasetConfiguration);
             long endTime = System.nanoTime();
             long elapsedTimeInMillis = TimeUnit.MILLISECONDS.convert((endTime - startTime), TimeUnit.NANOSECONDS);
             long validAmountOfRecords = records.stream().count();
@@ -67,17 +73,40 @@ public class RestApiController {
         return buildOkResponse(Collections.singletonMap("value", response));
     }
 
-    @RequestMapping(value = "/reachabilityPlot", method = RequestMethod.GET)
+    @RequestMapping(value = "/temporalReachabilityPlot", method = RequestMethod.GET)
     public ResponseEntity getPlotByTemporalDimension(
-            @RequestParam("epsilon") int epsilon,
-            @RequestParam("minPts") int minPts) {
-        //List<Map> plotData = new ArrayList<>();
-        //Map<Integer, Double> spatialPlot = dataAnalysisService.getPlotBySpatialDim(recordsByStopThreshold);
-        Map<Integer, Integer> temporalPlot = dataAnalysisService.getPlotByTemporalDim(recordsByStopThreshold, epsilon, minPts);
-        //plotData.add(spatialPlot);
-        //plotData.add(temporalPlot);
+            @RequestParam("epsilonTemporal") int epsilonTemporal,
+            @RequestParam("minPtsTemporal") int minPtsTemporal) {
+        Map<Integer, Integer> temporalPlot = dataAnalysisService.getPlotByTemporalDim(recordsByStopThreshold, epsilonTemporal, minPtsTemporal);
         return buildOkResponse(Collections.singletonMap("data", temporalPlot));
     }
+
+    @RequestMapping(value = "/spatialReachabilityPlot", method = RequestMethod.GET)
+    public ResponseEntity getPlotBySpatialDimension(
+            @RequestParam("epsilonSpatial") double epsilonSpatial,
+            @RequestParam("minPtsSpatial") int minPtsSpatial) {
+        Map<Integer, Double> spatialPlot = dataAnalysisService.getPlotBySpatialDim(recordsByStopThreshold, epsilonSpatial, minPtsSpatial);
+        return buildOkResponse(Collections.singletonMap("data", spatialPlot));
+    }
+
+    @RequestMapping(value = "/spatialTemporalReachabilityPlot", method = RequestMethod.GET)
+    public ResponseEntity getPlotBySpatialDimension(
+            @RequestParam("epsilonTemporal") int epsilonTemporal,
+            @RequestParam("epsilonSpatial") double epsilonSpatial,
+            @RequestParam("minPtsTemporal") int minPtsTemporal) {
+        Map<Integer, SpatialTemporalDim> spatialPlot = dataAnalysisService.getPlotBySpatialTemporalDim(recordsByStopThreshold, epsilonTemporal, epsilonSpatial, minPtsTemporal);
+        return buildOkResponse(Collections.singletonMap("data", spatialPlot));
+    }
+
+    @RequestMapping(value = "/stdbscan", method = RequestMethod.GET)
+    public ResponseEntity getSTDBSCANData(
+            @RequestParam("epsilonTempSTDBSCAN") int epsilonTempSTDBSCAN,
+            @RequestParam("epsilonSpatialSTDBSCAN") double epsilonSpatialSTDBSCAN,
+            @RequestParam("minPtsSTDBSCAN") int minPtsSTDBSCAN) {
+        Map<Integer, ModCluster> clusters = dataAnalysisService.getModClusters(recordsByStopThreshold, epsilonTempSTDBSCAN, epsilonSpatialSTDBSCAN, minPtsSTDBSCAN);
+        return buildOkResponse(Collections.singletonMap("data", clusters));
+    }
+
 
     private <T> ResponseEntity<T> buildOkResponse(final T response) {
         return new ResponseEntity<>(response, HttpStatus.OK);

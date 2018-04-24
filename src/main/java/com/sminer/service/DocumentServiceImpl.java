@@ -29,16 +29,16 @@ public class DocumentServiceImpl implements IDocumentService{
     }
 
     @Override
-    public List<Record> parseCsvFileToRecords(File file) {
+    public List<Record> parseCsvFileToRecords(File file, List<Integer> datasetConfiguration) {
         List<Record> records = new ArrayList<>();
         try {
             records = Files.lines(file.toPath(), StandardCharsets.UTF_8).skip(1)
                     .map(s -> {
                         String[] parsedLine = s.split(",");
-                        return isValidRecord(new Record(Integer.parseInt(parsedLine[0]),
-                                parseTimestamp(parsedLine[2]),
-                                isPresent(parsedLine[4]) ? Double.parseDouble(parsedLine[4]) : 0,
-                                isPresent(parsedLine[5]) ? Double.parseDouble(parsedLine[5]) : 0));
+                        return isValidRecord(new Record(Integer.parseInt(parsedLine[datasetConfiguration.get(0)]),
+                                parseTimestamp(parsedLine[datasetConfiguration.get(1)]),
+                                isPresent(parsedLine[datasetConfiguration.get(2)]) ? Double.parseDouble(parsedLine[datasetConfiguration.get(2)]) : 0,
+                                isPresent(parsedLine[datasetConfiguration.get(3)]) ? Double.parseDouble(parsedLine[datasetConfiguration.get(3)]) : 0));
                     })
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
@@ -66,7 +66,7 @@ public class DocumentServiceImpl implements IDocumentService{
     }
 
     private Timestamp parseTimestamp(String timestamp) {
-        // Time pattern cares about hours and minutes
+        // Time pattern considers hours and minutes
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm");
         Date parsedDate;
         try {

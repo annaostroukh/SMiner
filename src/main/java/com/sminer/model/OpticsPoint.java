@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 
 public class OpticsPoint<T extends Comparable<T>> extends Record implements Comparable<OpticsPoint<T>> {
     private T reachabilityDistance = null;
+    private SpatialTemporalDim reachabilityDistanceTwoDim = null;
     private T coreDistance = null;
     private int order;
     private boolean isProcessed = false;
@@ -44,8 +45,16 @@ public class OpticsPoint<T extends Comparable<T>> extends Record implements Comp
         this.order = order;
     }
 
+    public SpatialTemporalDim getReachabilityDistanceTwoDim() {
+        return reachabilityDistanceTwoDim;
+    }
+
+    public void setReachabilityDistanceTwoDim(SpatialTemporalDim reachabilityDistanceTwoDim) {
+        this.reachabilityDistanceTwoDim = reachabilityDistanceTwoDim;
+    }
+
     @Override
     public int compareTo(OpticsPoint<T> o) {
-        return getCoreDistance().compareTo(o.getCoreDistance());
+        return reachabilityDistance.compareTo(o.reachabilityDistance);
     }
 }

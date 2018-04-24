@@ -8,9 +8,10 @@
     <link rel="stylesheet" href="/css/loading-bar.css" type="text/css" media="all" />
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <link rel="stylesheet" href="/css/leaflet.css">
+    <link rel="stylesheet" href="/css/leaflet.awesome-markers.css"/>
     <link rel="stylesheet" href="/css/sminer.css"/>
 </head>
-<body ng-app="sminer">
+<body ng-app="sminer" ng-cloak>
 <header>
     <!-- Fixed navbar -->
     <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
@@ -27,10 +28,15 @@
                     <a class="nav-link" id="optics-tab" data-toggle="tab" href="#optics" role="tab" aria-controls="optics" aria-selected="false">OPTICS Reachability plot</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" id="locations-tab" data-toggle="tab" href="#locations" role="tab" ria-controls="locations" aria-selected="false">Extract semantic locations</a>
+                    <a class="nav-link" id="locations-tab" data-toggle="tab" href="#locations" role="tab" aria-controls="locations" aria-selected="false">Extract semantic locations</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="configuration-tab" data-toggle="tab" href="#configuration" role="tab" aria-controls="configuration" aria-selected="false">Configuration</a>
                 </li>
             </ul>
         </div>
+        <!-- Progress bar -->
+        <div id="loading-bar-container"></div>
     </nav>
 </header>
 <!-- Begin page content -->
@@ -39,6 +45,9 @@
         <div id="myTabContent" class="tab-content">
         <div id="stops" class="tab-pane fade show active tab-margin" role="tabpanel" aria-labelledby="stops-tab">
             <div class="button-contols upload-section">
+                <div class="row alert alert-info info-margin" role="alert">
+                    Settings for columns in MOD dataset are available in configuration section
+                </div>
                 <!-- Upload data set section -->
                 <div class="input-group mb-3 row justify-content-md-center">
                     <div class="input-group-prepend">
@@ -52,10 +61,11 @@
                         </label>
                     </div>
                 </div>
-                <!-- Progress bar -->
-                <div ng-if="uploadingInProgress" id="loading-bar-container"></div>
+                <div ng-if="failedToUploadDataset && !uploadingInProgress && !fileLoaded" class="row alert alert-danger info-margin" role="alert">
+                    {{failedToUploadDataset}}
+                </div>
                 <!-- File info section -->
-                <div class="file-info row justify-content-md-center" ng-if="fileLoaded">
+                <div class="table-basic row justify-content-md-center" ng-if="fileLoaded && !uploadingInProgress">
                     <table class="table">
                         <thead>
                         <tr>
@@ -82,7 +92,7 @@
 
                 <!-- Data set actions buttons -->
                 <div class = "analysis-actions">
-                    <div ng-show="fileLoaded">
+                    <div ng-show="fileLoaded && !uploadingInProgress">
                         <div  class="row">
                             <b>Set required stop duration in minutes</b>
                         </div>
@@ -93,16 +103,20 @@
                         </div>
                         <div class="row">
                             <div ng-if="stopsExtracted" class="alert alert-success container-wide" role="alert">
-                                <span><p>{{stopsAmount}}</p><a href="#optics" class="alert-link">Go to reachability plot</a></span>
+                                <span><p>{{stopsAmount}}</p></span>
                             </div>
                         </div>
                     </div>
-                    <!--<button type="button" class="btn btn-secondary" ng-disabled="!dataSetAnalysisDone">Discover semantic locations</button>-->
                 </div>
             </div>
         </div>
 
         <div id="optics" class="tab-pane fade tab-margin" role="tabpanel" aria-labelledby="optics-tab">
+            <div ng-show="!stopsExtracted">
+                <div class="alert alert-warning" role="alert">
+                    Running of the OPTICS algorithm is possible just after stops extraction
+                </div>
+            </div>
             <!-- Reachability plot graph -->
             <div ng-show="stopsExtracted">
                 <div class="row">
@@ -112,56 +126,226 @@
                     <h5 class="analysis-actions">Temporal plot</h5>
                 </div>
                 <div class="extract-stops row justify-content-md-center">
-                    <input type="text" placeholder="Epsilon (maximum stop duration)" ng-model="epsilon" class="stop-duration form-control col" id="epsilon">
-                    <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPts" class="stop-duration form-control col" id="minPts">
-                    <button type="button" class="btn btn-primary" ng-click="getReachabilityPlot()" ng-disabled="!stopsExtracted">Get Reachability plot</button>
+                    <input type="text" placeholder="Epsilon (maximum stop duration (minutes))" ng-model="epsilonTemporal" class="stop-duration form-control col" id="epsilonTemporal">
+                    <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPtsTemporal" class="stop-duration form-control col" id="minPtsTemporal">
+                    <button type="button" class="btn btn-primary" ng-click="getTemporalReachabilityPlot()" ng-disabled="!stopsExtracted">Get Reachability plot</button>
                 </div>
                 <div class="row">
                     <h5 class="analysis-actions">Spatial plot</h5>
                 </div>
                 <div class="extract-stops row justify-content-md-center">
-                    <input type="text" placeholder="Epsilon (maximum radius)" ng-model="epsilonSpatial" class="stop-duration form-control col" id="epsilonSpatial">
+                    <input type="text" placeholder="Epsilon (maximum radius (km))" ng-model="epsilonSpatial" class="stop-duration form-control col" id="epsilonSpatial">
                     <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPtsSpatial" class="stop-duration form-control col" id="minPtsSpatial">
-                    <button type="button" class="btn btn-primary" ng-click="getReachabilityPlot()" ng-disabled="!stopsExtracted">Get Reachability plot</button>
+                    <button type="button" class="btn btn-primary" ng-click="getSpatialReachabilityPlot()" ng-disabled="!stopsExtracted">Get Reachability plot</button>
                 </div>
+                <div class="extract-stops row justify-content-md-center">
+                    <input type="text" placeholder="Maximum stop duration (minutes)" ng-model="epsilonTemporal" class="stop-duration form-control col">
+                    <input type="text" placeholder="Maximum radius (km)" ng-model="epsilonSpatial" class="stop-duration form-control col">
+                    <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPtsTemporal" class="stop-duration form-control col">
+                    <button type="button" class="btn btn-primary" ng-click="getSpatialTemporalReachabilityPlot()" ng-disabled="!stopsExtracted">Get Spatial Temporal reachability plot</button>
+                </div>
+                <div class="analysis-actions graph-margin" zingchart id="temporalChart" zc-json="temporalPlotData" zc-width="100%" zc-height="600px"></div>
+                <!--<div class="analysis-actions" zingchart id="temporalScatterChart" zc-json="temporalScatterPlotData" zc-width="100%" zc-height="600px"></div>-->
+                <div class="analysis-actions graph-margin" zingchart id="spatialChart" zc-json="spatialPlotData" zc-width="100%" zc-height="600px"></div>
+                <div class="analysis-actions graph-margin" zingchart id="spatialTemporalChart" zc-json="spatialTemporalPlotData" zc-width="100%" zc-height="600px"></div>
             </div>
-            <div zingchart id="myChart" zc-json="myJson" zc-width="100%" zc-height="568px"></div>
         </div>
         <div id="locations" class="tab-pane fade tab-margin" role="tabpanel" aria-labelledby="locations-tab">
-
+            <div ng-show="!stopsExtracted">
+                <div class="alert alert-warning" role="alert">
+                    Running of the STDBSCAN algorithm is possible just after stops extraction
+                </div>
+            </div>
+            <div ng-show="stopsExtracted">
+                <div class="row">
+                    <h3 class="header-margin">ST-DBSCAN settings</h3>
+                </div>
+                <div class="extract-stops row justify-content-md-center">
+                    <input type="text" placeholder="Epsilon of stop duration in minutes" ng-model="epsilonTempSTDBSCAN" class="stop-duration form-control col" id="epsilonTempSTDBSCAN">
+                    <input type="text" placeholder="Epsilon of area radius in km" ng-model="epsilonSpatialSTDBSCAN" class="stop-duration form-control col" id="epsilonSpatialSTDBSCAN">
+                    <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPtsSTDBSCAN" class="stop-duration form-control col" id="minPtsSTDBSCAN">
+                    <button type="button" class="btn btn-primary" ng-click="getSTDBSCANData()" ng-disabled="!stopsExtracted">Run STDBSCAN</button>
+                </div>
+            </div>
+            <div ng-show="STDBSCANClustersAvailable">
+                <div class="row">
+                    <h4 class="sub-header-margin">Semantic locations discovery</h4>
+                </div>
+                <div class="row">
+                    <h6>Extract all locations inside and outside of the bounding boxes within given distance (if distance is not set, discovered locations which intersects with bounding boxes)</h6>
+                </div>
+                <div class="extract-stops row justify-content-md-center">
+                    <input type="text" placeholder="Distance (km)" ng-model="boundingBoxStretch" class="stop-duration form-control col" id="boundingBoxStretch">
+                    <button type="button" class="btn btn-primary" ng-click="extractAllLocations()">Extract all locations</button>
+                </div>
+                <table class="table table-hover table-basic">
+                    <thead>
+                    <tr>
+                        <th>Cluster ID</th>
+                        <th>Bounding box</th>
+                        <th>Points</th>
+                        <th>Semantic locations</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="cluster in clusters">
+                        <td>{{cluster.clusterId}}</td>
+                        <td>
+                            ({{cluster.lattitudeMax}}, {{cluster.longitudeMax}})
+                            ({{cluster.lattitudeMin}}, {{cluster.longitudeMin}})
+                        </td>
+                        <td>
+                            <div id="accordion">
+                                <div id="headingOne">
+                                    <h5 class="mb-0">
+                                        <button class="btn btn-link" data-toggle="collapse" data-target="#{{cluster.clusterId}}" aria-expanded="false" aria-controls="{{cluster.clusterId}}">
+                                            Show points in cluster <span>({{cluster.points.length}})</span>
+                                        </button>
+                                    </h5>
+                                </div>
+                                <div id="{{cluster.clusterId}}" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+                                    <div class="card-body">
+                                        <div ng-repeat="point in cluster.points">
+                                            <span>ModId: {{point.modId}} </span>
+                                            <span>Time: {{point.formattedDateTime}} </span>
+                                            <span>Longitude: {{point.longitude}} </span>
+                                            <span>Lattitude: {{point.lattitude}} </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <button ng-if="!locationsStatus[cluster.clusterId][1].extracted && !locationsStatus[cluster.clusterId][0].available" class="btn btn-link" ng-click="getSemanticLocations(cluster.clusterId)">Extract semantic locations</button>
+                            <span ng-if="locationsStatus[cluster.clusterId][1].extracted && !locationsStatus[cluster.clusterId][0].available">There are no significant places in this cluster</span>
+                            <button ng-if="locationsStatus[cluster.clusterId][1].extracted && locationsStatus[cluster.clusterId][0].available" type="button" class="btn btn-link" data-toggle="modal" data-target="#{{cluster.clusterId}}-modal">
+                                View locations
+                            </button>
+                            <!-- Modal -->
+                            <div class="modal fade" id="{{cluster.clusterId}}-modal" tabindex="-1" role="dialog" aria-labelledby="{{cluster.clusterId}}-modal" aria-hidden="true">
+                                <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="{{cluster.clusterId}}-modalTitle">Locations in Cluster {{cluster.clusterId}}</h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="container-fluid">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label for="{{cluster.clusterId}}-sel">Select locations (hold shift to select multiple):</label>
+                                                        <select ng-model="selectedLocations[cluster.clusterId]" multiple class="form-control multiselect-area" id="{{cluster.clusterId}}-sel" ng-options="location.locationName for location in locationsFormatted[cluster.clusterId]"></select>
+                                                    </div>
+                                                    <div class="btn-group-vertical">
+                                                        <button ng-click="chooseSelectedLocations(cluster.clusterId)" type="button" class="btn btn-secondary">>></button>
+                                                        <button ng-click="rejectChoosenLocations(cluster.clusterId)" type="button" class="btn btn-secondary"><<</button>
+                                                    </div>
+                                                    <div class="col-md-5">
+                                                        <label for="{{cluster.clusterId}}-chosen">Chosen locations</label>
+                                                        <select ng-model="selectedLocations[cluster.clusterId]" multiple class="form-control multiselect-area" id="{{cluster.clusterId}}-chosen" ng-options="location.locationName for location in chosenLocations[cluster.clusterId]"></select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                            <button ng-click="saveChosenLocations(cluster.clusterId)" type="button" class="btn btn-primary">Save changes</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+                <div class="row">
+                    <div class="col-8">
+                        <button class="btn btn-primary button-in-row" ng-click="showMapView()">Show map</button>
+                        <button class="btn btn-link button-in-row" ng-click="getMapView()">Fit map to clusters boundaries</button>
+                    </div>
+                    <div class="col-4 text-right">
+                        <button class="btn btn-primary" ng-click="exportClustersData()">Export clusters' data to JSON</button>
+                    </div>
+                </div>
+                <div ng-if="isMapShown" class="form-group buttons-group row">
+                    <div class="form-check form-check-inline">
+                        <label class="form-check-label">
+                            <input class="form-check-input" type="checkbox" ng-model="showClusters" ng-change="getClusterLocationsOnMap(showClusters)">
+                            Show clusters
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <label class="form-check-label">
+                            <input class="form-check-input" type="checkbox" ng-model="showStops" ng-change="getStopsLocationsOnMap(showStops)">
+                            Show stops in clusters
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <label class="form-check-label">
+                            <input class="form-check-input" type="checkbox" ng-model="showGeometry" ng-change="getLocationsGeometryOnMap(showGeometry)">
+                            Show locations' geometry
+                        </label>
+                    </div>
+                </div>
+                <!-- Map -->
+                <leaflet id="map" ng-if="isMapShown" maxbounds="maxbounds" paths="paths" markers="markers" width="100%" height="600px"></leaflet>
+            </div>
+        </div>
+        <div id="configuration" class="tab-pane fade tab-margin" role="tabpanel" aria-labelledby="configuration-tab">
+            <div class="row">
+                <h3 class="header-margin">Configuration for MOD dataset</h3>
+            </div>
+            <div ng-if="saveConfigResponse.value" class="row alert alert-success success-alert-margin justify-content-center" role="alert">
+                {{saveConfigResponse.value}}
+            </div>
+            <div class="extract-stops row justify-content-md-center">
+                <div class="col">
+                    <p><b>Numeration starts from 0</b></p>
+                    <label for="modId">Mod ID column number:</label>
+                    <input type="text" placeholder="" ng-model="modIdCol" class="stop-duration form-control col" id="modId">
+                    <label for="timestamp">Timestamp column number:</label>
+                    <input type="text" placeholder="" ng-model="timestampCol" class="stop-duration form-control col" id="timestamp">
+                </div>
+            </div>
+            <div class="extract-stops row justify-content-md-center">
+                <div class="col">
+                    <label for="longitude">Longitude column number:</label>
+                    <input type="text" placeholder="" ng-model="longitudeCol" class="stop-duration form-control col" id="longitude">
+                    <label for="latitude">Latitude column number:</label>
+                    <input type="text" placeholder="" ng-model="latitudeCol" class="stop-duration form-control col" id="latitude">
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary" ng-click="saveConfiguration()">Save</button>
         </div>
     </div> <!-- Tab content -->
-
-
-        <!-- Map -->
-        <!--<leaflet width="100%" height="500px"></leaflet>-->
     </div>
 </main>
-
 <footer class="footer">
     <div class="container">
-        <span class="text-muted">Place sticky footer content here.</span>
+        <span class="text-muted">Semantics miner</span>
     </div>
 </footer>
-
+<script src="/js/libs/jquery.js"></script>
 <script src="/js/libs/angular.min.js"></script>
 <script src="/js/libs/angular-route.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+<!--<script src="/js/libs/bootstrap.min.js"></script>-->
+<script src="/js/libs/angular-file-saver.bundle.js"></script>
 <script src="/js/libs/tab.js"></script>
 <script src="/js/libs/alert.js"></script>
-<!-- Leaflet js map viewer -->
 <script src="/js/libs/leaflet.js"></script>
+<script src="/js/libs/angular-leaflet-directive.js"></script>
 <script src="/js/libs/angular-simple-logger.js"></script>
 <script src="/js/libs/ui-leaflet.min.js"></script>
 <script src="/js/libs/loading-bar.js"></script>
 <script src="/js/libs/zingchart.min.js"></script>
 <script src="/js/libs/zingchart-angularjs.js"></script>
+<script src="/js/libs/leaflet.awesome-markers.js"></script>
 
 <script src="/js/app.js"></script>
 <script src="/js/sminerController.js"></script>
 <script src="/js/sminerService.js"></script>
-
 </body>
 </html>

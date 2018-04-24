@@ -1,7 +1,12 @@
 package com.sminer.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
+import java.util.Date;
 
 /**
  * Entity for storing GPS record data
@@ -30,6 +35,7 @@ public class Record {
         return modId;
     }
 
+    @JsonIgnore
     public Duration getStopDuration() {
         return stopDuration;
     }
@@ -38,6 +44,7 @@ public class Record {
         this.stopDuration = stopDuration;
     }
 
+    @JsonIgnore
     public boolean isStop() {
         return stop;
     }
@@ -46,6 +53,7 @@ public class Record {
         this.stop = stop;
     }
 
+    @JsonIgnore
     public int getStopId() {
         return stopId;
     }
@@ -62,10 +70,17 @@ public class Record {
         return lattitude;
     }
 
+    public long getFormattedDurationInMin() { return stopDuration.toMinutes();}
+
+    public String getFormattedPoint() { return this.toString(); }
+
+    public String getFormattedDateTime() { return new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(new Date(this.timestamp.getTime()));}
 
     public String toString() {
-        return "ModId: '" + this.modId
-                + "', StartTime: '" + this.timestamp + "'";
+        return "ModId: " + this.modId
+                + ", Time: " + this.timestamp
+                + ", Longitude : " + this.longitude
+                + ", Lattitude : " + this.lattitude;
     }
 
 }

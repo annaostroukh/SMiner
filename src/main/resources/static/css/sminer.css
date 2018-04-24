@@ -40,13 +40,14 @@ code {
     margin-top: 10px;
 }
 
-.file-info {
+.table-basic {
     width: 100%;
-    margin-bottom: 10px;
+    margin-bottom: 30px;
+    margin-top: 40px;
 }
 
-#loading-bar .bar {
-    position: relative;
+#loading-bar-spinner {
+    top: 63px;
 }
 
 .analysis-actions {
@@ -56,19 +57,55 @@ code {
 .stop-duration {
     margin-right: 10px;
 }
+.info-margin {
+    margin-right: 14px;
+}
+
+.success-alert-margin {
+    margin: 10px -2px;
+}
 
 .extract-stops {
     margin-bottom: 15px;
+}
+
+.graph-margin {
+    margin-bottom: 30px;
 }
 
 .container-wide {
     width: 100%;
 }
 
+.buttons-group {
+    margin: 20px 0px;
+    border: 1px solid #C3C3C3;
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.multiselect-area {
+    height: 400px;
+    overflow-x: auto;
+}
+
 .tab-margin {
     margin-top: 50px;
 }
 
+.button-in-row {
+    margin-right: 10px;
+}
+
 .header-margin {
     margin-bottom: 30px;
+}
+
+.sub-header-margin {
+    margin-bottom: 20px;
+}
+
+.angular-leaflet-map svg{
+    width: initial;
+    height: initial;
 }

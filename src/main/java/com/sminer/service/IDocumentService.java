@@ -10,7 +10,7 @@ import java.util.List;
 public interface IDocumentService {
     File save(MultipartFile file) throws IOException;
 
-    List<Record> parseCsvFileToRecords(File file);
+    List<Record> parseCsvFileToRecords(File file, List<Integer> datasetConfiguration);
 
     long countLinesInDocument(File file);
 }
