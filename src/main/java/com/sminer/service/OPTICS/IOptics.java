@@ -14,7 +14,7 @@ public interface IOptics<T> {
      * @param epsilon neighbourhood value. Generic type <T> represents spatial or temporal parameter of epsilon
      * @param minPts minimal amount of points to shape a cluster
      */
-    List<OpticsPoint> runOneDimensionOPTICS(List<Record> records, T epsilon, int minPts);
+    List<OpticsPoint> runOneDimensionOptics(List<Record> records, T epsilon, int minPts);
 
     /**
      * Implementation of OPTICS algorithm running on two dimensions (Spatial and Temporal)
@@ -23,5 +23,5 @@ public interface IOptics<T> {
      * @param epsilonSpatial neighbourhood value for spatial dimension
      * @param minPts minimal amount of points to shape a cluster
      */
-    List<OpticsPoint> runSpatialTemporalOPTICS(List<Record> records, T epsilonTemporal, Double epsilonSpatial, int minPts);
+    List<OpticsPoint> runSpatialTemporalOptics(List<Record> records, T epsilonTemporal, Double epsilonSpatial, int minPts);
 }

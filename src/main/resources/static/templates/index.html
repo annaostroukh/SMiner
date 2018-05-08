@@ -106,6 +106,27 @@
                                 <span><p>{{stopsAmount}}</p></span>
                             </div>
                         </div>
+
+                        <div ng-if="stopsExtracted">
+                            <div class="extract-stops row justify-content-md-center">
+                                <div class="stop-duration form-control col">
+                                    <label for="sel1"><b>Select date from:</b></label>
+                                    <select ng-model="selectedDateFrom.value" ng-options="x for x in dates" class="form-control" id="sel1">
+                                    </select>
+                                </div>
+                                <div class="stop-duration form-control col">
+                                    <label for="sel2"><b>Select date till:</b></label>
+                                    <select ng-model="selectedDateTill.value" ng-options="x for x in dates" class="form-control" id="sel2">
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-primary col-12 col-md-auto" ng-click=filterStopsByTime()>Submit</button>
+                            </div>
+                            <div class="row">
+                                <div ng-if="stopsByTimeExtracted" class="alert alert-success container-wide" role="alert">
+                                    <span><p>{{stopsByTime}}</p></span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -126,7 +147,7 @@
                     <h5 class="analysis-actions">Temporal plot</h5>
                 </div>
                 <div class="extract-stops row justify-content-md-center">
-                    <input type="text" placeholder="Epsilon (maximum stop duration (minutes))" ng-model="epsilonTemporal" class="stop-duration form-control col" id="epsilonTemporal">
+                    <input type="text" placeholder="Epsilon (maximum temporal distance (minutes))" ng-model="epsilonTemporal" class="stop-duration form-control col" id="epsilonTemporal">
                     <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPtsTemporal" class="stop-duration form-control col" id="minPtsTemporal">
                     <button type="button" class="btn btn-primary" ng-click="getTemporalReachabilityPlot()" ng-disabled="!stopsExtracted">Get Reachability plot</button>
                 </div>
@@ -139,7 +160,7 @@
                     <button type="button" class="btn btn-primary" ng-click="getSpatialReachabilityPlot()" ng-disabled="!stopsExtracted">Get Reachability plot</button>
                 </div>
                 <div class="extract-stops row justify-content-md-center">
-                    <input type="text" placeholder="Maximum stop duration (minutes)" ng-model="epsilonTemporal" class="stop-duration form-control col">
+                    <input type="text" placeholder="Maximum temporal distance (minutes)" ng-model="epsilonTemporal" class="stop-duration form-control col">
                     <input type="text" placeholder="Maximum radius (km)" ng-model="epsilonSpatial" class="stop-duration form-control col">
                     <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPtsTemporal" class="stop-duration form-control col">
                     <button type="button" class="btn btn-primary" ng-click="getSpatialTemporalReachabilityPlot()" ng-disabled="!stopsExtracted">Get Spatial Temporal reachability plot</button>
@@ -161,7 +182,7 @@
                     <h3 class="header-margin">ST-DBSCAN settings</h3>
                 </div>
                 <div class="extract-stops row justify-content-md-center">
-                    <input type="text" placeholder="Epsilon of stop duration in minutes" ng-model="epsilonTempSTDBSCAN" class="stop-duration form-control col" id="epsilonTempSTDBSCAN">
+                    <input type="text" placeholder="Epsilon of temporal distance in minutes" ng-model="epsilonTempSTDBSCAN" class="stop-duration form-control col" id="epsilonTempSTDBSCAN">
                     <input type="text" placeholder="Epsilon of area radius in km" ng-model="epsilonSpatialSTDBSCAN" class="stop-duration form-control col" id="epsilonSpatialSTDBSCAN">
                     <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPtsSTDBSCAN" class="stop-duration form-control col" id="minPtsSTDBSCAN">
                     <button type="button" class="btn btn-primary" ng-click="getSTDBSCANData()" ng-disabled="!stopsExtracted">Run STDBSCAN</button>
@@ -172,7 +193,7 @@
                     <h4 class="sub-header-margin">Semantic locations discovery</h4>
                 </div>
                 <div class="row">
-                    <h6>Extract all locations inside and outside of the bounding boxes within given distance (if distance is not set, discovered locations which intersects with bounding boxes)</h6>
+                    <h6>Extract all locations inside and outside of the bounding boxes within given distance (if distance is not set, discovered locations which intersect with bounding boxes)</h6>
                 </div>
                 <div class="extract-stops row justify-content-md-center">
                     <input type="text" placeholder="Distance (km)" ng-model="boundingBoxStretch" class="stop-duration form-control col" id="boundingBoxStretch">
@@ -273,13 +294,25 @@
                     <div class="form-check form-check-inline">
                         <label class="form-check-label">
                             <input class="form-check-input" type="checkbox" ng-model="showClusters" ng-change="getClusterLocationsOnMap(showClusters)">
-                            Show clusters
+                            Show clusters' area
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <label class="form-check-label">
+                            <input class="form-check-input" type="checkbox" ng-model="showClusterPoints" ng-change="showPointsInCluster(showClusterPoints)">
+                            Show clusters' points
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <label class="form-check-label">
+                            <input class="form-check-input" type="checkbox" ng-model="showBoundingBoxes" ng-change="getBoundingBoxesLocationsOnMap(showBoundingBoxes)">
+                            Show bounding boxes of clusters
                         </label>
                     </div>
                     <div class="form-check form-check-inline">
                         <label class="form-check-label">
                             <input class="form-check-input" type="checkbox" ng-model="showStops" ng-change="getStopsLocationsOnMap(showStops)">
-                            Show stops in clusters
+                            Show stops info
                         </label>
                     </div>
                     <div class="form-check form-check-inline">
@@ -288,6 +321,16 @@
                             Show locations' geometry
                         </label>
                     </div>
+                </div>
+                <div ng-if="clustersDisplayed()" class="form-group buttons-group row">
+                    <div class="row" ng-repeat="cluster in clustersInLegend" style="margin-left: -2px;">
+                        <span ng-style="{'background': cluster.fillColor}" class="color-bullets">&nbsp;</span>
+                        <span class="list-text">&nbsp;{{cluster.message}}&nbsp;</span>
+                    </div>
+                       <!-- <li ng-repeat="cluster in clustersInLegend" ng-style="{'background': cluster.fillColor}" class="color-bullets">
+                            <span>&nbsp;{{cluster.message}}&nbsp;</span>
+                        </li>
+                    </ul>-->
                 </div>
                 <!-- Map -->
                 <leaflet id="map" ng-if="isMapShown" maxbounds="maxbounds" paths="paths" markers="markers" width="100%" height="600px"></leaflet>

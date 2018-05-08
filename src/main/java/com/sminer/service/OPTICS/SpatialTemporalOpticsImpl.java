@@ -5,14 +5,11 @@ import com.sminer.model.SpatialTemporalDim;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
-public class SpatialTemporalOpticsImpl extends AbstractOpticsImpl<Integer> {
+public class SpatialTemporalOpticsImpl extends AbstractOpticsImpl<Integer, SpatialTemporalDim> {
 
     @Autowired
     private SpatialOpticsImpl spatialOptics;
@@ -39,5 +36,13 @@ public class SpatialTemporalOpticsImpl extends AbstractOpticsImpl<Integer> {
     @Override
     protected Integer getDistance(OpticsPoint pointP, OpticsPoint pointQ) {
         return null;
+    }
+
+    @Override
+    protected SpatialTemporalDim getCoreDistance(Set<OpticsPoint> points, OpticsPoint point) {
+        return points.stream()
+                .map(neighbour -> getSpatialTemporalDistance(point, neighbour))
+                .min(Comparator.comparing(SpatialTemporalDim::getTemporalDim).thenComparing(SpatialTemporalDim::getSpatialDim))
+                .orElseThrow(NoSuchElementException::new);
     }
 }

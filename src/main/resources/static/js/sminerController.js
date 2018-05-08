@@ -20,6 +20,7 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
         $scope.locationsAvailable = false;
         $scope.semanticLocationsUploaded = false;
         $scope.isMapShown = false;
+        $scope.showBoundingBoxes = false;
 
         $scope.paths = {};
         $scope.markers = {};
@@ -76,7 +77,18 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
             dataAnalysisService.extractStops($scope.minStopDuration, $scope.maxStopDuration).then(
                 function(response) {
                     $scope.extractingStopsInProgress = false;
-                    $scope.stopsAmount = response.data.value;
+                    angular.forEach(response.data.value, function (value, key) {
+                        $scope.stopsAmount = key;
+                        $scope.stopsRecords = value;
+                    });
+                    var dates = [];
+                    angular.forEach($scope.stopsRecords, function(value, key) {
+                        var timestamp = new Date(value.timestamp).toISOString().split("T")[0];
+                        if (dates.indexOf(timestamp) === -1) {
+                            dates.push(timestamp);
+                        }
+                    });
+                    $scope.dates = sortedDateStrings(dates);
                     $scope.stopsExtracted = true;
                 },
                 function(errResponse) {
@@ -85,6 +97,31 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
                     $scope.stopsExtracted = false;
                 }
             )
+        };
+
+        var sortedDateStrings = function(dates) {
+            return dates.sort(function(a, b) {
+                var dateA = new Date(a), dateB = new Date(b);
+                return dateA - dateB;
+            });
+        };
+
+        $scope.selectedDateFrom = {};
+        $scope.selectedDateTill = {};
+        $scope.filterStopsByTime = function () {
+            $scope.extractingStopsByTimeInProgress = true;
+            dataAnalysisService.filterStopsByTime($scope.selectedDateFrom.value, $scope.selectedDateTill.value).then(
+                function(response) {
+                    $scope.stopsByTime = response.data.value;
+                    $scope.stopsByTimeExtracted = response.data.value.length > 0;
+                    $scope.extractingStopsByTimeInProgress = false;
+                },
+                function(errResponse) {
+                    alert(errResponse.data.errorMessage);
+                    $scope.extractingStopsInProgress = false;
+                    $scope.stopsByTimeExtracted = false;
+                }
+             )
         };
 
         /*
@@ -106,7 +143,7 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
                     //$scope.plotData = response.data.data;
                     angular.forEach(response.data.data, function(value, key) {
                         labels.push(key);
-                        data.push(value == 0 ? null : value);
+                        data.push(value == -1 ? null : value);
                     });
                     $scope.temporalPlotData = getPlotSettings(labels, data, temporalPlotOptions);
                     //$scope.temporalScatterPlotData = getScatterPlotSettings(data, data);
@@ -135,7 +172,7 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
                     //$scope.plotData = response.data.data;
                     angular.forEach(response.data.data, function(value, key) {
                         labels.push(key);
-                        data.push(value == 0.0 ? null : value);
+                        data.push(value == -1.0 ? null : value);
                     });
                     $scope.spatialPlotData = getPlotSettings(labels, data, spatialPlotOptions);
                 },
@@ -161,8 +198,8 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
                     };
                     angular.forEach(response.data.data, function(value, key) {
                         labels.push(key);
-                        dataTemporal.push(value.temporalDim == 0 ? null : value.temporalDim);
-                        dataSpatial.push(value.spatialDim == 0.0 ? null : value.spatialDim);
+                        dataTemporal.push(value.temporalDim == -1 ? null : value.temporalDim);
+                        dataSpatial.push(value.spatialDim == -1.0 ? null : value.spatialDim);
                     });
                     $scope.spatialTemporalPlotData = getSpatialTemporalPlotSettings(labels, dataTemporal, dataSpatial, spatialTemporalPlotOptions);
                 },
@@ -221,12 +258,12 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
             });
         };
 
-        $scope.getClusterLocationsOnMap = function(showClusters) {
-            if (showClusters) {
+        $scope.getBoundingBoxesLocationsOnMap = function(showBoundingBoxes) {
+            if (showBoundingBoxes) {
                 angular.forEach($scope.clusters, function (value, key) {
                     $scope.paths["rectangle" + value.clusterId] = {
                         color: 'red',
-                        fillColor: '#f03',
+                        fillColor: '#ED1C24',
                         fillOpacity: 0.5,
                         weight: 1,
                         latlngs: [[value.lattitudeMax, value.longitudeMax], [value.lattitudeMin, value.longitudeMin]],
@@ -245,37 +282,172 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
             }
         };
 
+        $scope.showClusterPoints = false;
+        $scope.showPointsInCluster = function(showClusterPoints) {
+            if (showClusterPoints) {
+                var i = 0;
+                angular.forEach($scope.clusters, function (value, key1) {
+                    var latlng = [];
+                    angular.forEach(value.points, function(point, key2) {
+                        latlng.push([point.lattitude, point.longitude]);
+                        $scope.paths["circleCluster" + i] = {
+                            fillColor: $scope.color["cluster" + key1],
+                            fillOpacity: 0.95,
+                            weight: 0.5,
+                            latlngs: [point.lattitude, point.longitude],
+                            radius: 25,
+                            type: "circle",
+                            message: "Cluster: " + value.clusterId,
+                            clickable: true,
+                            heading: 240
+                        };
+                        i++;
+                    });
+                });
+            } else {
+                for (var key in $scope.paths) {
+                    if (key.indexOf("circleCluster") !== -1) {
+                        delete $scope.paths[key];
+                    }
+                }
+            }
+        };
+
+        $scope.clustersDisplayed = function () {
+            for (var key in $scope.paths) {
+                if (key.indexOf("circleCluster") !== -1 || key.indexOf("cluster") !== -1) {
+                    return true;
+                }
+            }
+        };
+
+        $scope.color = [];
+        $scope.clustersInLegend = [];
+        $scope.getClusterLocationsOnMap = function(showClusters) {
+            if (showClusters) {
+                var clustersInLegend = [];
+                angular.forEach($scope.clusters, function (value, key) {
+                    $scope.color["cluster" + key] =  getRandomColor();
+                    var maxLon = Math.max.apply(Math,value.points.map(function(item){return item.longitude;}));
+                    var maxLat = Math.max.apply(Math,value.points.map(function(item){return item.lattitude;}));
+                    var radius = getSpatialDistance(maxLon, maxLat, value.clusterCentroidLon, value.clusterCentroidLat);
+                    var clusterProps = {
+                        fillColor: $scope.color["cluster" + key],
+                        fillOpacity: 0.5,
+                        weight: 2,
+                        latlngs: [value.clusterCentroidLat, value.clusterCentroidLon],
+                        radius: radius * 1000,
+                        type: "circle",
+                        message: "Cluster: " + value.clusterId,
+                        clickable: true,
+                        heading: 240
+                    };
+                    $scope.paths["clusterCentroid" + value.clusterId] = clusterProps;
+                    clustersInLegend.push(clusterProps);
+                });
+                $scope.clustersInLegend = clustersInLegend;
+            } else {
+                for (var key in $scope.paths) {
+                    if (key.indexOf("clusterCentroid") !== -1) {
+                        delete $scope.paths[key];
+                    }
+                }
+            }
+        };
+
+        // used for computing the radius for drawing a cluster area
+        var getSpatialDistance = function (lonP, latP, lonQ, latQ) {
+            var deltaX = latP - latQ;
+            var deltaY = (lonP - lonQ) * Math.cos(latQ);
+            return 110.25 * Math.sqrt((Math.pow(deltaX, 2) + Math.pow(deltaY, 2)));
+        };
+
+        // Random color generator for clusters colors on a map
+        var getRandomColor = function () {
+            var letters = '0123456789ABCDEF'.split('');
+            var color = '#';
+            for (var i = 0; i < 6; i++ ) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        };
+
         $scope.getLocationsGeometryOnMap = function (showGeometry) {
                 var i = 0;
+                var j = 0;
+                var k = 0;
+                var m = 0;
                 angular.forEach($scope.locationsFormatted.filter(function (item) {
                     return (item.length > 0);
                 }), function(cluster, key) {
-                    angular.forEach(cluster, function(value, key) {
-                        if (showGeometry) {
-                            var latlngs = [];
-                            angular.forEach(value.locationGeo, function (item, key) {
-                                latlngs.push([item.lat, item.lon]);
-                            });
-                            $scope.paths["polygon" + i] = {
-                                color: '#004C06',
-                                fillColor: '#FA6905',
-                                fillOpacity: 0.5,
-                                weight: 1,
-                                latlngs: latlngs,
-                                type: "polygon",
-                                message: value.locationName,
-                                clickable: true,
-                                heading: 240
-                            };
-                            i++;
-                        } else {
-                            for (var key in $scope.paths) {
-                                if (key.indexOf("polygon") !== -1) {
-                                    delete $scope.paths[key];
-                                }
+                    if (showGeometry) {
+                        angular.forEach(cluster, function(value, key) {
+                            if (value.locationGeoType === "LineString") {
+                                $scope.paths["way" + j] = {
+                                    color: '#0000FF',
+                                    fillColor: '#0000FF',
+                                    fillOpacity: 0.5,
+                                    weight: 5,
+                                    latlngs: value.locationGeo,
+                                    type: "polyline",
+                                    message: value.locationName,
+                                    clickable: true,
+                                    heading: 240
+                                };
+                                j++;
+                            } else if (value.locationGeoType === "Point") {
+                                $scope.paths["point" + k] = {
+                                    color: '#0000FF',
+                                    fillColor: '#0000FF',
+                                    fillOpacity: 0.5,
+                                    weight: 1,
+                                    latlngs: value.locationGeo,
+                                    type: "circle",
+                                    radius: 50,
+                                    message: value.locationName,
+                                    clickable: true,
+                                    heading: 240
+                                };
+                                k++;
+                            } else if (value.locationGeoType === "Polygon") {
+                                $scope.paths["building" + m] = {
+                                    color: '#004C06',
+                                    fillColor: '#FA6905',
+                                    fillOpacity: 0.5,
+                                    weight: 1,
+                                    latlngs: value.locationGeo,
+                                    type: "polygon",
+                                    message: value.locationName,
+                                    clickable: true,
+                                    heading: 240
+                                };
+                                m++;
+                            } else if (!value.locationGeoType) {
+                                var latlngs = [];
+                                angular.forEach(value.locationGeo, function (item, key) {
+                                    latlngs.push([item.lat, item.lon]);
+                                });
+                                $scope.paths["polygon" + i] = {
+                                    color: '#004C06',
+                                    fillColor: '#FA6905',
+                                    fillOpacity: 0.5,
+                                    weight: 1,
+                                    latlngs: latlngs,
+                                    type: "polygon",
+                                    message: value.locationName,
+                                    clickable: true,
+                                    heading: 240
+                                };
+                                i++;
                             }
+                        });
+                    } else {
+                        for (var key in $scope.paths) {
+                            if (key.indexOf("polygon") !== -1 || key.indexOf("way") !== -1 || key.indexOf("point") !== -1 || key.indexOf("building") !== -1) {
+                                delete $scope.paths[key];
+                                }
                         }
-                    });
+                    }
                 });
         };
 
@@ -292,7 +464,7 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
                                 icon: "star",
                                 markerColor: "blue"
                             },
-                            message: "ModId: " + value.modId + "</br>Stop duration: " + value.formattedDurationInMin + " min"
+                            message: "Mod ID: " + value.modId + "</br>Stop ID: " + value.stopId + "</br>Stop duration: " + value.formattedDurationInMin + " min"
                         }
                     });
                 });
@@ -318,7 +490,10 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
             $scope.showGeometry = false;
             $scope.getMapView();
             angular.forEach($scope.clusters, function(value, key) {
-                $scope.getSemanticLocations(value.clusterId);
+                // to prevent of the Overpass "Too many requests" error status
+                setTimeout(function(){
+                    $scope.getSemanticLocations(value.clusterId);
+                }, 1500 * key);
             });
         };
 
@@ -330,12 +505,64 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
                                     + getBoundingBoxStretch(currentCluster.lattitudeMax, undefined, $scope.boundingBoxStretch, 1) + ","
                                     + getBoundingBoxStretch(currentCluster.longitudeMax, currentCluster.lattitudeMax, $scope.boundingBoxStretch, 1);
             var overpassInterpreterURLSuffix = ");out geom;";
+            var overpassQuery = overpassInterpreterURLPrefix + clusterBoundingBox + overpassInterpreterURLSuffix;
+            getOverpassData(overpassQuery, clusterId);
+        };
+
+        var getNominatimData = function(nominatimQuery, clusterId) {
+            var nominatimResponse;
+            var semanticLocations = [];
+            var locationsStatus = [];
+            $http({
+                method: 'GET',
+                url: nominatimQuery,
+                timeout: 5000
+            }).then(function (response) {
+                nominatimResponse = response.data;
+                locationsStatus.push({
+                    available: nominatimResponse.display_name ? true : false
+                });
+                if (locationsStatus[0].available) {
+                    semanticLocations.push({
+                        locationName: nominatimResponse.display_name,
+                        locationGeo: flipCoord(nominatimResponse.geojson.coordinates),
+                        locationGeoType: nominatimResponse.geojson.type
+                    });
+                }
+                locationsStatus.push({
+                    extracted: semanticLocations.length > 0
+                });
+                if ($scope.locationsStatus[clusterId][0] === undefined || !$scope.locationsStatus[clusterId][0].available)  {
+                    $scope.locationsStatus[clusterId] = locationsStatus;
+                }
+                if ($scope.locationsFormatted[clusterId]) {
+                    var l = $scope.locationsFormatted[clusterId].length;
+                    $scope.locationsFormatted[clusterId][l] = semanticLocations[0];
+                } else {
+                    $scope.locationsFormatted[clusterId] = semanticLocations;
+                }
+            }, function (errResponse) {
+                if(errResponse.statusText) {
+                    alert("Error: " + errResponse.status + " " + errResponse.statusText)
+                } else {
+                    alert("Sorry, there is a problem with connection to Nominatim server. Please, try again later");
+                }
+                $scope.locationsStatus[clusterId] = {
+                    available: false,
+                    extracted: false
+                };
+            });
+
+        };
+
+        var getOverpassData = function(overpassQuery, clusterId) {
             var overpassResponse;
             var semanticLocations = [];
             var locationsStatus = [];
             $http({
                 method: 'GET',
-                url: overpassInterpreterURLPrefix + clusterBoundingBox + overpassInterpreterURLSuffix
+                url: overpassQuery,
+                timeout: 5000
             }).then(function (response) {
                 var i = 1;
                 overpassResponse = response.data.elements;
@@ -362,17 +589,26 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
                         });
                     });
                 }
-                $scope.locationsFormatted[clusterId] = semanticLocations;
                 locationsStatus.push({
-                    extracted: true
+                    extracted: semanticLocations.length > 0
                 });
                 $scope.locationsStatus[clusterId] = locationsStatus;
+                $scope.locationsFormatted[clusterId] = semanticLocations;
             }, function (errResponse) {
-                alert("Sorry, there is a problem with connection to OpenstreetMap server. Please, try again later");
-                $scope.locationsStatus[clusterId].push({
+                if(errResponse.statusText) {
+                    alert("Error: " + errResponse.status + " " + errResponse.statusText)
+                } else {
+                    alert("Sorry, there is a problem with connection to OpenstreetMap server. Please, try again later");
+                }
+                $scope.locationsStatus[clusterId] = {
                     available: false,
                     extracted: false
-                });
+                };
+            }).then(function() {
+                var currentCluster = $scope.clusters[clusterId];
+                var nominatimQuery = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=" + currentCluster.clusterCentroidLat + "&lon="
+                    + currentCluster.clusterCentroidLon + "&osm_type=W&zoom=18&polygon_geojson=1&addressdetails=1&accept-language=en";
+                getNominatimData(nominatimQuery, clusterId);
             });
         };
 
@@ -487,24 +723,27 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
             }, []);
         };
 
-        /*var getScatterPlotLabels = function(data) {
-            return data.sort(function(a, b){
-                return a-b
-            });
-        }
-
-        var getScatterPlotSettings = function(labels, data) {
-            return {
-                type: "scatter",
-                scaleX: {
-                    zooming: true,
-                    values: getScatterPlotLabels(labels)
-                },
-                series: [{
-                    values: data
-                }]
-            };
-        };*/
+        var flipCoord = function(array) {
+            var flippedArray = [];
+            if (angular.isArray(array)){
+                if(array.length == 1 && array[0].length > 1) {
+                    angular.forEach(array[0], function (value, key) {
+                        var flipped = [value[1], value[0]];
+                        value = flipped;
+                        flippedArray.push(value);
+                    });
+                } else if (array.length > 1 && array[0].length == 2) {
+                    angular.forEach(array, function (value, key) {
+                        var flipped = [value[1], value[0]];
+                        value = flipped;
+                        flippedArray.push(value);
+                    });
+                } else {
+                    flippedArray = [array[1], array[0]];
+                }
+                return flippedArray.reverse();
+            }
+        };
 
         var getSpatialTemporalPlotSettings = function(labels, dataTemporal, dataSpatial, options) {
             return {
@@ -556,7 +795,6 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
                     offsetY: -20,
                     values: labels,
                     "items-overlap": true,
-                    "zoom-to":[0,50],
                     label:{
                         text: options.labelX,
                         "font-family": "Segoe UI",
@@ -642,7 +880,6 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
                 scaleX: {
                     zooming: true,
                     values: labels,
-                    "zoom-to":[0,50],
                     label:{
                         text: options.labelX,
                         "font-family": "Segoe UI",
@@ -682,6 +919,4 @@ module.directive("fileModel", ["$parse", function ($parse) {
 module.config(["cfpLoadingBarProvider", function(cfpLoadingBarProvider) {
     cfpLoadingBarProvider.includeSpinner = true;
     cfpLoadingBarProvider.latencyThreshold = 1000;
-    //cfpLoadingBarProvider.parentSelector = '#loading-bar-container';
-    //cfpLoadingBarProvider.spinnerTemplate = '<div><span class="fa fa-spinner">Uploading the dataset...</div>';
 }]);

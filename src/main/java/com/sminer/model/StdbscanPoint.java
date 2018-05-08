@@ -2,12 +2,12 @@ package com.sminer.model;
 
 import java.sql.Timestamp;
 
-public class STDBSCANpoint extends Record {
+public class StdbscanPoint extends Record {
     private boolean isNoise = false;
     private boolean isProcessed = false;
     private Integer clusterId = null;
 
-    public STDBSCANpoint(int modId, Timestamp startTime, double longitude, double lattitude) {
+    public StdbscanPoint(int modId, Timestamp startTime, double longitude, double lattitude) {
         super(modId, startTime, longitude, lattitude);
     }
 

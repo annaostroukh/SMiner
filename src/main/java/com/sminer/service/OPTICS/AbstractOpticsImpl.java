@@ -3,16 +3,16 @@ package com.sminer.service.OPTICS;
 import com.sminer.model.OpticsPoint;
 import com.sminer.model.Record;
 import com.sminer.model.SpatialTemporalDim;
-import jdk.nashorn.internal.ir.annotations.Immutable;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
 
-public abstract class AbstractOpticsImpl<T extends Comparable<T>> implements IOptics<T> {
+public abstract class AbstractOpticsImpl<T extends Comparable<T>, D> implements IOptics<T> {
     /**
      * Function converting Records to Optics data structure and grouping them by moving object Id
      */
@@ -24,85 +24,42 @@ public abstract class AbstractOpticsImpl<T extends Comparable<T>> implements IOp
     private static final Predicate<OpticsPoint> notProcessed = (OpticsPoint point) -> !point.isProcessed();
 
     @Override
-    public List<OpticsPoint> runOneDimensionOPTICS(List<Record> records, T epsilon, int minPts) {
-        return runOPTICS(records, epsilon, null, minPts);
+    public List<OpticsPoint> runOneDimensionOptics(List<Record> records, T epsilon, int minPts) {
+        return runOptics(records, epsilon, null, minPts);
     }
 
     @Override
-    public List<OpticsPoint> runSpatialTemporalOPTICS(List<Record> records, T epsilonTemporal, Double epsilonSpatial, int minPts) {
-        return runOPTICS(records, epsilonTemporal, epsilonSpatial, minPts);
+    public List<OpticsPoint> runSpatialTemporalOptics(List<Record> records, T epsilonTemporal, Double epsilonSpatial, int minPts) {
+        return runOptics(records, epsilonTemporal, epsilonSpatial, minPts);
     }
 
-    private List<OpticsPoint> runOPTICS(List<Record> records, T epsilon, Double epsilonSpatial, int minPts) {
+    private List<OpticsPoint> runOptics(List<Record> records, T epsilon, Double epsilonSpatial, int minPts) {
         int order = 0;
-        List<OpticsPoint> seedList = new ArrayList<>();
+        Set<OpticsPoint> neighbours = new HashSet<>();
         Map<Integer, List<OpticsPoint>> points = recordsToOpticsPointsById.apply(records);
 
         for (Map.Entry<Integer, List<OpticsPoint>> entry : points.entrySet()) {
             for (OpticsPoint point : entry.getValue().stream().filter(notProcessed).collect(Collectors.toList())) {
-                seedList.clear();
-                seedList.addAll(epsilonSpatial == null
-                        ? expandCluster(point, points, epsilon, minPts, new ArrayList<>(), order)
-                        : expandCluster(point, points, epsilon, epsilonSpatial, minPts, new ArrayList<>(), order));
+                neighbours.clear();
+                neighbours.addAll(expandCluster(point, points, epsilon, epsilonSpatial, new ArrayList<>(), minPts, order));
                 order++;
-                if (!seedList.isEmpty()) {
+                if (!neighbours.isEmpty()) {
+                    List<OpticsPoint> seedList = new ArrayList<>(neighbours);
                     asSortedList(seedList);
-                    Map<Integer, List<OpticsPoint>> map = extractSeeds(seedList, points, epsilon, epsilonSpatial, minPts, order);
-                    if (map.values().contains(Collections.emptyList())) {
-                        order = map.entrySet().stream().map(e -> e.getKey()).findFirst().get();
+                    while (!seedList.isEmpty()) {
+                        asSortedList(seedList);
+                        OpticsPoint current = seedList.get(0);
+                        seedList = expandCluster(current, points, epsilon, epsilonSpatial, seedList, minPts, order);
+                        order++;
                     }
                 }
             }
         }
+
         return points.values().stream().collect(Collectors.toList()).stream().flatMap(List::stream).collect(Collectors.toList());
     }
 
-    private Map<Integer, List<OpticsPoint>> extractSeeds(List<OpticsPoint> seedList, Map<Integer, List<OpticsPoint>> database, T epsilon,  Double epsilonSpatial, int minPts, int order) {
-        if (seedList.stream().distinct().filter(notProcessed).collect(Collectors.toList()).isEmpty()) {
-            Map<Integer, List<OpticsPoint>> map = new HashMap<>();
-            map.put(order, Collections.emptyList());
-            return map;
-        }
-        OpticsPoint seedPoint = seedList.stream().distinct().filter(notProcessed).collect(Collectors.toList()).get(0);
-        seedList.addAll(epsilonSpatial == null
-                    ? expandCluster(seedPoint, database, epsilon, minPts, seedList, order)
-                    : expandCluster(seedPoint, database, epsilon, epsilonSpatial, minPts, seedList, order));
-        order++;
-        asSortedList(seedList);
-        return extractSeeds(seedList, database, epsilon, epsilonSpatial, minPts, order);
-    }
-
-    private List<OpticsPoint> expandCluster(OpticsPoint point, Map<Integer, List<OpticsPoint>> database, T epsilon, int minPts, List<OpticsPoint> seedList, int order) {
-        // skip trajectory to which current data point belongs
-        Map<Integer, List<OpticsPoint>> data = database.entrySet().stream()
-                .filter(entry -> entry.getKey() != point.getModId())
-                .collect(Collectors.toMap(m -> m.getKey(), m -> m.getValue()));
-        Set<OpticsPoint> neighbours = new HashSet<>();
-        data.entrySet().stream().forEach(trajectory -> {
-             neighbours.addAll(getNeighbours(trajectory.getValue().stream().filter(notProcessed).collect(Collectors.toList()), point, epsilon));
-        });
-
-        if (neighbours.size() >= minPts) {
-            // remove core object from its neighbours list
-            neighbours.remove(point);
-            T coreDistance = neighbours.stream()
-                    .map(neighbour -> getDistance(point, neighbour))
-                    .min(T::compareTo).orElseThrow(NoSuchElementException::new);
-            // if to core object hasn't been assigned reachability distance, assign its core distance
-            if (point.getReachabilityDistance() == null) {
-                point.setReachabilityDistance(coreDistance);
-            }
-            neighbours.forEach(neighbour -> neighbour.setReachabilityDistance(getDistance(point, neighbour)));
-            seedList.addAll(neighbours);
-        }
-        point.setProcessed(true);
-        point.setOrder(order);
-        seedList.remove(point);
-
-        return seedList.stream().distinct().filter(notProcessed).collect(Collectors.toList());
-    }
-
-    private List<OpticsPoint> expandCluster(OpticsPoint point, Map<Integer, List<OpticsPoint>> database, T epsilon, Double epsilonSpatial, int minPts, List<OpticsPoint> seedList, int order) {
+    private List<OpticsPoint> expandCluster(OpticsPoint point, Map<Integer, List<OpticsPoint>> database, T epsilon, Double epsilonSpatial, List<OpticsPoint> seedList, int minPts, int order) {
         Map<Integer, List<OpticsPoint>> data = database.entrySet().stream()
                 .filter(entry -> entry.getKey() != point.getModId())
                 .collect(Collectors.toMap(m -> m.getKey(), m -> m.getValue()));
@@ -111,31 +68,37 @@ public abstract class AbstractOpticsImpl<T extends Comparable<T>> implements IOp
              neighbours.addAll(getNeighbours(trajectory.getValue().stream().filter(notProcessed).collect(Collectors.toList()), point, epsilon, epsilonSpatial));
         });
 
+        seedList.remove(point);
         if (neighbours.size() >= minPts) {
             // remove core object from its neighbours list
             neighbours.remove(point);
-            SpatialTemporalDim coreDistance = neighbours.stream()
-                    .map(neighbour -> getSpatialTemporalDistance(point, neighbour))
-                    .min(Comparator.comparing(SpatialTemporalDim::getTemporalDim).thenComparing(SpatialTemporalDim::getSpatialDim))
-                    .orElseThrow(NoSuchElementException::new);
-            // if to core object hasn't been assigned reachability distance, assign its core distance
-            if (point.getReachabilityDistanceTwoDim() == null) {
-                point.setReachabilityDistanceTwoDim(coreDistance);
-            }
-            neighbours.forEach(neighbour -> neighbour.setReachabilityDistanceTwoDim(getSpatialTemporalDistance(point, neighbour)));
-            seedList.addAll(neighbours);
+            assignReachabilityDistance(point, neighbours, epsilonSpatial);
+            neighbours.stream().filter(elem -> !seedList.contains(elem) && !elem.isProcessed()).forEach(elem -> seedList.add(elem));
         }
+
         point.setProcessed(true);
         point.setOrder(order);
-        seedList.remove(point);
 
         return seedList.stream().distinct().filter(notProcessed).collect(Collectors.toList());
     }
 
-    private Set<OpticsPoint> getNeighbours(List<OpticsPoint> points, OpticsPoint point, T epsilon) {
-        Set<OpticsPoint> neighbours = points.stream().filter(record -> isNeighbour(point, record, epsilon)).collect(Collectors.toSet());
-        neighbours.add(point);
-        return neighbours;
+    private void assignReachabilityDistance(OpticsPoint point, Set<OpticsPoint> neighbours, Double epsilonSpatial) {
+        D coreDistanceTwoDim;
+        T coreDistanceOneDim;
+        if (epsilonSpatial != null) {
+            coreDistanceTwoDim = getCoreDistance(neighbours, point);
+            // if to core object hasn't been assigned reachability distance, assign its core distance
+            if (coreDistanceTwoDim != null && point.getReachabilityDistanceTwoDim() == null) {
+                point.setReachabilityDistanceTwoDim((SpatialTemporalDim) coreDistanceTwoDim);
+            }
+            neighbours.forEach(neighbour -> neighbour.setReachabilityDistanceTwoDim(getSpatialTemporalDistance(point, neighbour)));
+        } else {
+            coreDistanceOneDim = (T) getCoreDistance(neighbours, point);
+            if (coreDistanceOneDim != null && point.getReachabilityDistance() == null) {
+                point.setReachabilityDistance(coreDistanceOneDim);
+            }
+            neighbours.forEach(neighbour -> neighbour.setReachabilityDistance(getDistance(point, neighbour)));
+        }
     }
 
     private boolean isNeighbour(OpticsPoint pointP, OpticsPoint pointQ, T epsilon) {
@@ -144,12 +107,19 @@ public abstract class AbstractOpticsImpl<T extends Comparable<T>> implements IOp
 
     protected abstract T getDistance(OpticsPoint pointP, OpticsPoint pointQ);
 
-    protected abstract SpatialTemporalDim getSpatialTemporalDistance(OpticsPoint pointP, OpticsPoint pointQ);
+    protected abstract D getCoreDistance(Set<OpticsPoint> points, OpticsPoint point);
 
-    private Set<OpticsPoint> getNeighbours(List<OpticsPoint> points, OpticsPoint point, T epsilonTemporal, Double epsilonSpatial) {
-        Set<OpticsPoint> neighbours = points.stream().filter(record -> isNeighbour(point, record, epsilonTemporal, epsilonSpatial)).collect(Collectors.toSet());
+    protected SpatialTemporalDim getSpatialTemporalDistance(OpticsPoint pointP, OpticsPoint pointQ) { return null;}
+
+    private Set<OpticsPoint> getNeighbours(List<OpticsPoint> points, OpticsPoint point, T epsilonOneDim, Double epsilonSpatial) {
+        Set<OpticsPoint> neighbours = new HashSet<>();
+        if (epsilonSpatial != null){
+            neighbours.addAll(points.stream().filter(record -> isNeighbour(point, record, epsilonOneDim, epsilonSpatial)).collect(Collectors.toSet()));
+        } else {
+            neighbours.addAll(points.stream().filter(record -> isNeighbour(point, record, epsilonOneDim)).collect(Collectors.toSet()));
+        }
         neighbours.add(point);
-        return neighbours;
+        return neighbours.stream().filter(notProcessed).collect(Collectors.toSet());
     }
 
     protected boolean isNeighbour(OpticsPoint pointP, OpticsPoint pointQ, T epsilonTemporal, Double epsilonSpatial) {

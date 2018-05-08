@@ -8,7 +8,8 @@ public class ModCluster {
     private final double lattitudeMax;
     private final double longitudeMin;
     private final double longitudeMax;
-    private double clusterCentroid;
+    private double clusterCentroidLat;
+    private double clusterCentroidLon;
     private final List<Record> points;
 
     public ModCluster(int clusterId, double lattitudeMin, double lattitudeMax, double longitudeMin, double longitudeMax,
@@ -21,13 +22,17 @@ public class ModCluster {
         this.points = points;
     }
 
-    public double getClusterCentroid() {
-        return clusterCentroid;
+    public double getClusterCentroidLat() {
+        return clusterCentroidLat;
     }
 
-    public void setClusterCentroid(double clusterCentroid) {
-        this.clusterCentroid = clusterCentroid;
+    public void setClusterCentroidLat(double clusterCentroidLat) {
+        this.clusterCentroidLat = clusterCentroidLat;
     }
+
+    public double getClusterCentroidLon() { return clusterCentroidLon; }
+
+    public void setClusterCentroidLon(double clusterCentroidLon) { this.clusterCentroidLon = clusterCentroidLon; }
 
     public int getClusterId() {
         return clusterId;

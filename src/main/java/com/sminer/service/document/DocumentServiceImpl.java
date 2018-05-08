@@ -1,4 +1,4 @@
-package com.sminer.service;
+package com.sminer.service.document;
 
 import com.sminer.model.Record;
 import org.springframework.stereotype.Service;
@@ -11,15 +11,15 @@ import java.nio.file.Files;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
 public class DocumentServiceImpl implements IDocumentService{
 
     @Override
-    public File save(MultipartFile file) throws IOException {
+    public File saveFile(MultipartFile file) throws IOException {
         File convFile = new File(file.getOriginalFilename());
         convFile.createNewFile();
         FileOutputStream fos = new FileOutputStream(convFile);
@@ -29,32 +29,31 @@ public class DocumentServiceImpl implements IDocumentService{
     }
 
     @Override
-    public List<Record> parseCsvFileToRecords(File file, List<Integer> datasetConfiguration) {
+    public Map<Long, List<Record>> parseCsvFileToRecords(File file, List<Integer> datasetConfiguration) {
+        AtomicInteger atomicInt = new AtomicInteger(0);
         List<Record> records = new ArrayList<>();
         try {
             records = Files.lines(file.toPath(), StandardCharsets.UTF_8).skip(1)
                     .map(s -> {
-                        String[] parsedLine = s.split(",");
-                        return isValidRecord(new Record(Integer.parseInt(parsedLine[datasetConfiguration.get(0)]),
-                                parseTimestamp(parsedLine[datasetConfiguration.get(1)]),
-                                isPresent(parsedLine[datasetConfiguration.get(2)]) ? Double.parseDouble(parsedLine[datasetConfiguration.get(2)]) : 0,
-                                isPresent(parsedLine[datasetConfiguration.get(3)]) ? Double.parseDouble(parsedLine[datasetConfiguration.get(3)]) : 0));
+                        atomicInt.getAndIncrement();
+                        if (!s.isEmpty()) {
+                            String[] parsedLine = s.split(",");
+                            return isValidRecord(new Record(Integer.parseInt(parsedLine[datasetConfiguration.get(0)].replaceAll("\\s+","")),
+                                    parseTimestamp(parsedLine[datasetConfiguration.get(1)]),
+                                    isPresent(parsedLine[datasetConfiguration.get(2)]) ? Double.parseDouble(parsedLine[datasetConfiguration.get(2)]) : 0,
+                                    isPresent(parsedLine[datasetConfiguration.get(3)]) ? Double.parseDouble(parsedLine[datasetConfiguration.get(3)]) : 0));
+                        }
+                        return null;
                     })
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return records;
-    }
+        Map<Long, List<Record>> map = new HashMap<>();
+        map.put(atomicInt.longValue(), records);
 
-    @Override
-    public long countLinesInDocument(File file) {
-        try {
-            return Files.lines(file.toPath(), StandardCharsets.UTF_8).skip(1).count();
-        } catch (IOException e) {
-            return 0;
-        }
+        return map;
     }
 
     private Record isValidRecord(Record t) {

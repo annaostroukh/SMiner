@@ -47,6 +47,14 @@ angular.module("sminer.service",[]).factory("sminerService", ["$http", "CONSTANT
                                 maxStopDuration: maxStopDuration}
                 });
             };
+            service.filterStopsByTime = function(dateFrom, dateTill) {
+                return $http({
+                    method: 'GET',
+                    url: CONSTANTS.filterStopsByTime,
+                    params: { dateFrom: dateFrom,
+                       dateTill: dateTill}
+                });
+            };
             service.getTemporalReachabilityPlot = function(epsilonTemporal, minPtsTemporal) {
                 return $http({
                     method: 'GET',

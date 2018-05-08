@@ -36,6 +36,10 @@ code {
     font-size: 80%;
 }
 
+[ng\:cloak], [ng-cloak], .ng-cloak {
+    display: none;
+}
+
 .upload-section {
     margin-top: 10px;
 }
@@ -108,4 +112,23 @@ code {
 .angular-leaflet-map svg{
     width: initial;
     height: initial;
+}
+
+.list-fmt {
+    list-style: none;
+    margin-left: -41px;
+}
+
+ul li{
+    display: inline-block;
+}
+
+.color-bullets {
+    width: 14px;
+    height: 14px;
+    padding-left:14px;
+}
+.list-text {
+    padding-right: 35px;
+    margin-top: -5px;
 }
