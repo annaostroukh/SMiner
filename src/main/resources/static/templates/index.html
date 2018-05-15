@@ -4,7 +4,6 @@
     <title>SemanticsMiner</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
     <link rel="stylesheet" href="/css/loading-bar.css" type="text/css" media="all" />
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <link rel="stylesheet" href="/css/leaflet.css">
@@ -48,7 +47,7 @@
                 <div class="row alert alert-info info-margin" role="alert">
                     Settings for columns in MOD dataset are available in configuration section
                 </div>
-                <!-- Upload data set section -->
+                <!-- Upload dataset section -->
                 <div class="input-group mb-3 row justify-content-md-center">
                     <div class="input-group-prepend">
                         <button ng-click="uploadFile()" class="btn btn-outline-secondary" type="button">Upload</button>
@@ -97,9 +96,17 @@
                             <b>Set required stop duration in minutes</b>
                         </div>
                         <div class="extract-stops row justify-content-md-center">
-                            <input type="text" placeholder="Minimum duration" ng-model="minStopDuration" class="stop-duration form-control col" id="minStopDuration">
-                            <input type="text" placeholder="Maximum duration" ng-model="maxStopDuration" class="stop-duration form-control col" id="maxStopDuration">
-                            <button type="button" class="btn btn-primary col-12 col-md-auto" ng-click=extractStops() ng-disabled="!minStopDuration">Extract stops</button>
+                            <div class="col clear-left-padding">
+                                <label for="minStopDuration">Minimum duration in minutes</label>
+                                <input type="text" ng-model="minStopDuration" class="stop-duration form-control col" id="minStopDuration">
+                            </div>
+                            <div class="col">
+                                <label for="maxStopDuration">Maximum duration in minutes</label>
+                                <input type="text" ng-model="maxStopDuration" class="stop-duration form-control col" id="maxStopDuration">
+                            </div>
+                            <div class="col-sm-2 align-self-end">
+                                <button type="button" class="btn btn-primary col rightspan" ng-click=extractStops() ng-disabled="!minStopDuration">Extract stops</button>
+                            </div>
                         </div>
                         <div class="row">
                             <div ng-if="stopsExtracted" class="alert alert-success container-wide" role="alert">
@@ -147,26 +154,55 @@
                     <h5 class="analysis-actions">Temporal plot</h5>
                 </div>
                 <div class="extract-stops row justify-content-md-center">
-                    <input type="text" placeholder="Epsilon (maximum temporal distance (minutes))" ng-model="epsilonTemporal" class="stop-duration form-control col" id="epsilonTemporal">
-                    <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPtsTemporal" class="stop-duration form-control col" id="minPtsTemporal">
-                    <button type="button" class="btn btn-primary" ng-click="getTemporalReachabilityPlot()" ng-disabled="!stopsExtracted">Get Reachability plot</button>
+                    <div class="col clear-left-padding align-self-end">
+                        <label for="epsilonTemporal">Epsilon (maximum temporal distance in minutes)</label>
+                        <input type="text" ng-model="epsilonTemporal" class="stop-duration form-control col" id="epsilonTemporal">
+                    </div>
+                    <div class="col align-self-end">
+                        <label for="minPtsTemporal">Minimum amount of data points</label>
+                        <input type="text" ng-model="minPtsTemporal" class="stop-duration form-control col" id="minPtsTemporal">
+                    </div>
+                    <div class="col-sm-2 align-self-end">
+                        <button type="button" class="btn btn-primary" ng-click="getTemporalReachabilityPlot()" ng-disabled="!stopsExtracted">Get Reachability plot</button>
+                    </div>
                 </div>
                 <div class="row">
                     <h5 class="analysis-actions">Spatial plot</h5>
                 </div>
                 <div class="extract-stops row justify-content-md-center">
-                    <input type="text" placeholder="Epsilon (maximum radius (km))" ng-model="epsilonSpatial" class="stop-duration form-control col" id="epsilonSpatial">
-                    <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPtsSpatial" class="stop-duration form-control col" id="minPtsSpatial">
-                    <button type="button" class="btn btn-primary" ng-click="getSpatialReachabilityPlot()" ng-disabled="!stopsExtracted">Get Reachability plot</button>
+                    <div class="col clear-left-padding align-self-end">
+                        <label for="epsilonSpatial">Epsilon (maximum distance in km)</label>
+                        <input type="text" ng-model="epsilonSpatial" class="stop-duration form-control col" id="epsilonSpatial">
+                    </div>
+                    <div class="col align-self-end">
+                        <label for="minPtsSpatial">Minimum amount of data points</label>
+                        <input type="text" ng-model="minPtsSpatial" class="stop-duration form-control col" id="minPtsSpatial">
+                    </div>
+                    <div class="col-sm-2 align-self-end">
+                        <button type="button" class="btn btn-primary" ng-click="getSpatialReachabilityPlot()" ng-disabled="!stopsExtracted">Get Reachability plot</button>
+                    </div>
+                </div>
+                <div class="row">
+                    <h5 class="analysis-actions">Temporal Spatial plot</h5>
                 </div>
                 <div class="extract-stops row justify-content-md-center">
-                    <input type="text" placeholder="Maximum temporal distance (minutes)" ng-model="epsilonTemporal" class="stop-duration form-control col">
-                    <input type="text" placeholder="Maximum radius (km)" ng-model="epsilonSpatial" class="stop-duration form-control col">
-                    <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPtsTemporal" class="stop-duration form-control col">
-                    <button type="button" class="btn btn-primary" ng-click="getSpatialTemporalReachabilityPlot()" ng-disabled="!stopsExtracted">Get Spatial Temporal reachability plot</button>
+                    <div class="col clear-left-padding align-self-end">
+                        <label for="epsilonS">Maximum temporal distance in minutes</label>
+                        <input type="text" ng-model="epsilonTemporal" class="stop-duration form-control col" id="epsilonS">
+                    </div>
+                    <div class="col align-self-end">
+                        <label for="epsilonT">Maximum distance in km</label>
+                        <input type="text" ng-model="epsilonSpatial" class="stop-duration form-control col" id="epsilonT">
+                    </div>
+                    <div class="col align-self-end">
+                        <label for="minPtsST">Minimum amount of data points</label>
+                        <input type="text" ng-model="minPtsTemporal" class="stop-duration form-control col" id="minPtsST">
+                    </div>
+                    <div class="col-sm-2 align-self-end">
+                        <button type="button" class="btn btn-primary" ng-click="getSpatialTemporalReachabilityPlot()" ng-disabled="!stopsExtracted">Get Spatial Temporal reachability plot</button>
+                    </div>
                 </div>
                 <div class="analysis-actions graph-margin" zingchart id="temporalChart" zc-json="temporalPlotData" zc-width="100%" zc-height="600px"></div>
-                <!--<div class="analysis-actions" zingchart id="temporalScatterChart" zc-json="temporalScatterPlotData" zc-width="100%" zc-height="600px"></div>-->
                 <div class="analysis-actions graph-margin" zingchart id="spatialChart" zc-json="spatialPlotData" zc-width="100%" zc-height="600px"></div>
                 <div class="analysis-actions graph-margin" zingchart id="spatialTemporalChart" zc-json="spatialTemporalPlotData" zc-width="100%" zc-height="600px"></div>
             </div>
@@ -182,10 +218,21 @@
                     <h3 class="header-margin">ST-DBSCAN settings</h3>
                 </div>
                 <div class="extract-stops row justify-content-md-center">
-                    <input type="text" placeholder="Epsilon of temporal distance in minutes" ng-model="epsilonTempSTDBSCAN" class="stop-duration form-control col" id="epsilonTempSTDBSCAN">
-                    <input type="text" placeholder="Epsilon of area radius in km" ng-model="epsilonSpatialSTDBSCAN" class="stop-duration form-control col" id="epsilonSpatialSTDBSCAN">
-                    <input type="text" placeholder="Minimum amount of data points in cluster" ng-model="minPtsSTDBSCAN" class="stop-duration form-control col" id="minPtsSTDBSCAN">
-                    <button type="button" class="btn btn-primary" ng-click="getSTDBSCANData()" ng-disabled="!stopsExtracted">Run STDBSCAN</button>
+                    <div class="col clear-left-padding align-self-end">
+                        <label for="epsilonTempSTDBSCAN">Epsilon of temporal distance in minutes</label>
+                        <input type="text" ng-model="epsilonTempSTDBSCAN" class="stop-duration form-control col" id="epsilonTempSTDBSCAN">
+                    </div>
+                    <div class="col align-self-end">
+                        <label for="epsilonSpatialSTDBSCAN">Epsilon of spatial distance in km</label>
+                        <input type="text" ng-model="epsilonSpatialSTDBSCAN" class="stop-duration form-control col" id="epsilonSpatialSTDBSCAN">
+                    </div>
+                    <div class="col align-self-end">
+                        <label for="minPtsSTDBSCAN">Minimum amount of data points</label>
+                        <input type="text" ng-model="minPtsSTDBSCAN" class="stop-duration form-control col" id="minPtsSTDBSCAN">
+                    </div>
+                    <div class="col-sm-2 align-self-end">
+                        <button type="button" class="btn btn-primary" ng-click="getSTDBSCANData()" ng-disabled="!stopsExtracted">Run STDBSCAN</button>
+                    </div>
                 </div>
             </div>
             <div ng-show="STDBSCANClustersAvailable">
@@ -344,12 +391,16 @@
                 {{saveConfigResponse.value}}
             </div>
             <div class="extract-stops row justify-content-md-center">
+                <label class="radio" style="margin-right: 50px"><input type="radio" ng-model="datasetOption.value" value="tdrive" ng-change="setDatasetConfiguration()" name="optradio">T-Drive dataset</label>
+                <label class="radio"><input type="radio" ng-model="datasetOption.value" value="berlinMod" ng-change="setDatasetConfiguration()" name="optradio">BerlinMOD dataset</label>
+            </div>
+            <div class="extract-stops row justify-content-md-center">
                 <div class="col">
                     <p><b>Numeration starts from 0</b></p>
                     <label for="modId">Mod ID column number:</label>
-                    <input type="text" placeholder="" ng-model="modIdCol" class="stop-duration form-control col" id="modId">
+                    <input type="text" ng-model="modIdCol" class="stop-duration form-control col" id="modId">
                     <label for="timestamp">Timestamp column number:</label>
-                    <input type="text" placeholder="" ng-model="timestampCol" class="stop-duration form-control col" id="timestamp">
+                    <input type="text" ng-model="timestampCol" class="stop-duration form-control col" id="timestamp">
                 </div>
             </div>
             <div class="extract-stops row justify-content-md-center">

@@ -24,14 +24,29 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
 
         $scope.paths = {};
         $scope.markers = {};
-
-        /*
-           Defaults for configuration of MOD dataset
-        */
+        $scope.datasetOption = {
+            value: 'berlinMod'
+        };
         $scope.modIdCol = 0;
         $scope.timestampCol = 2;
         $scope.longitudeCol = 4;
         $scope.latitudeCol = 5;
+
+
+        $scope.setDatasetConfiguration = function() {
+            console.log($scope.datasetOption.value);
+            if ($scope.datasetOption.value === 'tdrive') {
+                $scope.modIdCol = 0;
+                $scope.timestampCol = 1;
+                $scope.longitudeCol = 2;
+                $scope.latitudeCol = 3;
+            } else if ($scope.datasetOption.value === 'berlinMod') {
+                $scope.modIdCol = 0;
+                $scope.timestampCol = 2;
+                $scope.longitudeCol = 4;
+                $scope.latitudeCol = 5;
+            }
+        };
 
         $scope.saveConfiguration = function() {
             documentService.saveConfiguration($scope.modIdCol, $scope.timestampCol, $scope.longitudeCol, $scope.latitudeCol).then(
@@ -524,7 +539,7 @@ module.controller("sminerController", ["$scope", "$http", "$rootScope", "CONSTAN
                 });
                 if (locationsStatus[0].available) {
                     semanticLocations.push({
-                        locationName: nominatimResponse.display_name,
+                        locationName: "[centroid location]" + nominatimResponse.display_name,
                         locationGeo: flipCoord(nominatimResponse.geojson.coordinates),
                         locationGeoType: nominatimResponse.geojson.type
                     });

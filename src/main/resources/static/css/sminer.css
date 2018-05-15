@@ -132,3 +132,7 @@ ul li{
     padding-right: 35px;
     margin-top: -5px;
 }
+
+.clear-left-padding {
+    padding-left: 0px;
+}
